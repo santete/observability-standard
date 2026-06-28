@@ -197,3 +197,16 @@ docker compose --profile load-test down -v
 - Dự án này chạy với **security disabled** (`xpack.security.enabled=false`), chỉ phù hợp cho môi trường Demo/Dev.
 - Dữ liệu đơn hàng lưu **in-memory**, sẽ mất khi restart container app.
 - Cần tối thiểu **4GB RAM** cho Docker để chạy Elasticsearch ổn định.
+
+## 🗺️ Roadmap / Next Steps
+
+- [x] Phase 1: Chuẩn hóa Observability cho Backend Microservices (.NET 8).
+- [x] Phase 2: Triển khai các Dashboard tiêu chuẩn (Lớp 1, 2, 3, 4).
+- [ ] **Phase 3 (Sắp tới): Phát triển Observability Standard cho Frontend (Web/SPA).**
+  - Tích hợp RUM (Real User Monitoring).
+  - Web Vitals (FCP, LCP, CLS).
+  - Trace Context propagation từ Browser đến Backend.
+- [ ] **Phase 4 (Sắp tới): Phát triển Observability Standard cho Mobile Apps (iOS/Android).**
+  - Crash reporting & Stack traces.
+  - Screen rendering metrics.
+  - Network request tracing từ Mobile Client.
