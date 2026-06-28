@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MvpDemo.Service</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Observability Shared SDK -->
+    <ProjectReference Include="..\ISC.Observability\ISC.Observability.csproj" />
+
+    <!-- Health Checks -->
+    <PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="8.0.1" />
+  </ItemGroup>
+
+</Project>

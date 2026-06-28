@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observability Standard - Official Rollout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-green: #10b981;
+            --accent-purple: #c084fc;
+            --accent-pink: #f43f5e;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(192, 132, 252, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(56, 189, 248, 0.5); }
+            100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+        }
+
+        .animate-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
+        .delay-4 { animation-delay: 0.8s; }
+
+        /* Typography */
+        h1, h2, h3 { font-weight: 800; letter-spacing: -0.02em; }
+        h1 { font-size: 3.5rem; background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
+        h2 { font-size: 2.5rem; margin-bottom: 1.5rem; color: #fff; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.5rem; margin-bottom: 1rem; color: #f8fafc; }
+        p { margin-bottom: 1rem; color: var(--text-muted); }
+        code { font-family: 'Fira Code', monospace; background: rgba(0,0,0,0.5); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; color: var(--accent-blue); }
+        a { color: var(--accent-blue); text-decoration: none; transition: 0.3s; }
+        a:hover { color: #fff; text-shadow: 0 0 10px var(--accent-blue); }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 5rem;
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        /* Glassmorphism Components */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Grid Layouts */
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .pillar-card {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .pillar-card .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .pillar-card.logging .icon { color: var(--accent-blue); text-shadow: 0 0 20px var(--accent-blue); }
+        .pillar-card.tracing .icon { color: var(--accent-purple); text-shadow: 0 0 20px var(--accent-purple); }
+        .pillar-card.metrics .icon { color: var(--accent-green); text-shadow: 0 0 20px var(--accent-green); }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-main);
+        }
+
+        .feature-list li::before {
+            content: "✦";
+            position: absolute;
+            left: 0;
+            color: var(--accent-blue);
+        }
+
+        /* Mermaid container */
+        .diagram-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            overflow-x: auto;
+            text-align: center;
+            border: 1px solid var(--glass-border);
+        }
+
+        .reference-links {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            border: none;
+        }
+        
+        .btn.primary:hover {
+            animation: pulseGlow 2s infinite;
+        }
+
+        /* Role Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .badge.dev { background: rgba(56, 189, 248, 0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+        .badge.devops { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .badge.qa { background: rgba(244, 63, 94, 0.2); color: var(--accent-pink); border: 1px solid var(--accent-pink); }
+        .badge.sa { background: rgba(192, 132, 252, 0.2); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header animate-up">
+            <h1>Google Antigravity <br> Observability Standard</h1>
+            <p style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Tài liệu Official Rollout dành cho các khối kiến trúc, phát triển, vận hành và đảm bảo chất lượng hệ thống.</p>
+            
+            <div style="margin-top: 2rem;">
+                <span class="badge sa">Solution Architect</span>
+                <span class="badge dev">Developer</span>
+                <span class="badge devops">DevOps</span>
+                <span class="badge qa">QA</span>
+            </div>
+
+            <div class="reference-links">
+                <a href="./docs/ARCHITECTURE_STANDARD.html" target="_blank" class="btn primary">Kiến trúc Tiêu chuẩn</a>
+                <a href="./docs/OBSERVABILITY_STANDARD.html" target="_blank" class="btn">Quy định Tiêu chuẩn</a>
+                <a href="./docs/RUNBOOK_TEMPLATE.html" target="_blank" class="btn" style="border-color: var(--accent-pink); color: var(--accent-pink);">🚨 Mẫu Runbook Xử Lý Sự Cố</a>
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--accent-green);">
+                <em>* Tài liệu tiêu chuẩn đã được nhúng sẵn định dạng hiển thị. Bác có thể xem trực tiếp 100% bằng trình duyệt mà không cần cài thêm extension! 🎉</em>
+            </p>
+        </header>
+
+        <!-- Section 1: Philosophy -->
+        <section class="animate-up delay-1">
+            <h2>1. Triết Lý Observability (3 Trục Dữ Liệu)</h2>
+            <p>Khả năng quan sát (Observability) không phải là việc ghi log tràn lan, mà là xây dựng một hệ thống có thể "tự khai báo" trạng thái của nó thông qua 3 trụ cột dữ liệu chuẩn hóa, được liên kết chặt chẽ với nhau.</p>
+            
+            <div class="pillars-grid">
+                <div class="glass-panel pillar-card logging">
+                    <div class="icon">📝</div>
+                    <h3>Logging</h3>
+                    <p><strong>Ghi nhận sự kiện rời rạc.</strong> Chứa đựng các bản ghi văn bản có cấu trúc (Structured JSON) mô tả chi tiết <em>điều gì</em> đã xảy ra, vào <em>lúc nào</em>, với những tham số (context) gì.</p>
+                </div>
+                <div class="glass-panel pillar-card tracing">
+                    <div class="icon">🔗</div>
+                    <h3>Tracing</h3>
+                    <p><strong>Theo dõi bối cảnh luồng.</strong> Xâu chuỗi các logs và hành động qua nhiều microservices lại thành một câu chuyện duy nhất thông qua `TraceId` và `SpanId`.</p>
+                </div>
+                <div class="glass-panel pillar-card metrics">
+                    <div class="icon">📊</div>
+                    <h3>Metrics</h3>
+                    <p><strong>Đo lường tổng hợp.</strong> Các con số thống kê (RPS, CPU, Error Rate) để giám sát sức khỏe tổng thể và thiết lập cảnh báo tự động thay vì phải đếm từng dòng log.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Dev Responsibility & SDK Magic -->
+        <section class="glass-panel animate-up delay-2">
+            <h2><span class="badge dev">Developer</span> 2. Sức Mạnh Của SDK & Trách Nhiệm Của Dev</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
+                <div>
+                    <h3>Nhiệm Vụ Của Dev (Siêu Nhẹ)</h3>
+                    <p>Dev <strong>KHÔNG CẦN</strong> phải tự cấu hình Serilog, Elasticsearch, OpenTelemetry hay loay hoay với việc giấu thông tin nhạy cảm. Trách nhiệm duy nhất của Dev là:</p>
+                    <ol style="margin-left: 1.5rem; margin-bottom: 1.5rem; color: var(--text-main);">
+                        <li>
+                            Cài đặt SDK từ kho NuGet Server:
+                            <div style="margin: 0.8rem 0; padding: 0.8rem 1rem; background: rgba(0,0,0,0.4); border-radius: 6px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between;">
+                                <code>dotnet add package ISC.Observability</code>
+                                <a href="https://www.nuget.org/packages/ISC.Observability" target="_blank" class="badge qa" style="margin: 0; cursor: pointer; text-decoration: none;">📦 Mở trang NuGet</a>
+                            </div>
+                        </li>
+                        <li>Gọi <code>builder.AddStandardObservability("MyService")</code> tại Program.cs.</li>
+                        <li>Gọi <code>app.UseStandardObservability()</code>.</li>
+                        <li>Ghi log các mốc nghiệp vụ (Milestones) bằng <code>_logger.LogInformation()</code>.</li>
+                    </ol>
+                    <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--accent-green); padding: 1rem; border-radius: 4px;">
+                        <strong>Cam kết:</strong> SDK đảm bảo Service của bạn tuân thủ 100% tiêu chuẩn QA Compliance.
+                    </div>
+                </div>
+                
+                <div>
+                    <h3>SDK Tự Động Làm Gì? (Under the Hood)</h3>
+                    <ul class="feature-list">
+                        <li><strong>Global Exception Handling:</strong> Bắt toàn bộ lỗi (Crashes) chưa được xử lý, chụp StackTrace, URL, HTTP Method và tự động báo cáo lên mức ERROR.</li>
+                        <li><strong>HTTP Request Logging:</strong> Tự động ghi nhận mọi request đến và đi, thống kê thời gian phản hồi (Latency), mã trạng thái (200, 400, 500).</li>
+                        <li><strong>Auto-Correlation:</strong> Tự sinh <code>TraceId</code>, gài vào Response Header và truyền qua các service khác để xâu chuỗi luồng.</li>
+                        <li><strong>PII Masking:</strong> Tự động làm mờ các dữ liệu nhạy cảm (Email, Phone, SSN, Credit Card) trong log body bằng <code>***</code>.</li>
+                        <li><strong>Runtime Metrics:</strong> Thu thập tài nguyên hệ thống như GC Heap, ThreadPool starvation, CPU/RAM usage.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Data Flow Architecture -->
+        <section class="glass-panel animate-up delay-3">
+            <h2><span class="badge devops">DevOps</span> <span class="badge sa">SA</span> 3. Luồng Dữ Liệu & Tích Hợp Kafka</h2>
+            <p>Ứng dụng không trực tiếp kết nối với các hệ thống lưu trữ (Elasticsearch/Kafka) để tối ưu hiệu năng. Toàn bộ quá trình xuất dữ liệu đều thông qua giao thức chuẩn OTLP đẩy về bộ thu thập (Collector) do DevOps quản trị.</p>
+            
+            <div class="diagram-container" style="margin-top: 2rem;">
+                <div class="mermaid">
+                    graph LR
+                        subgraph "Tầng Ứng Dụng (Dev)"
+                            APP["Microservice<br>(.NET 8 + SDK)"]
+                        end
+
+                        subgraph "Tầng Hạ Tầng Thu Thập (DevOps)"
+                            OTEL{"OpenTelemetry<br>Collector"}
+                        end
+
+                        subgraph "Tầng Lưu Trữ & Hiển Thị"
+                            ES[("Elasticsearch<br>(Data Store)")]
+                            KAFKA[("Kafka Topics<br>(Log Sync)")]
+                            KIBANA[["Kibana<br>(Dashboards)"]]
+                        end
+
+                        APP == "gRPC/HTTP (OTLP)<br>Logs/Traces/Metrics" ==> OTEL
+                        
+                        OTEL -- "Pipeline 1: Lưu Trữ" --> ES
+                        OTEL -. "Pipeline 2: Bắn Kafka (Optional)" .-> KAFKA
+                        
+                        ES <--- KIBANA
+                        
+                        classDef app fill:#0e7490,stroke:#22d3ee,stroke-width:2px,color:#fff;
+                        classDef otel fill:#6b21a8,stroke:#d8b4fe,stroke-width:2px,color:#fff;
+                        classDef store fill:#b45309,stroke:#fcd34d,stroke-width:2px,color:#fff;
+                        classDef dash fill:#1d4ed8,stroke:#93c5fd,stroke-width:2px,color:#fff;
+                        
+                        class APP app;
+                        class OTEL otel;
+                        class ES,KAFKA store;
+                        class KIBANA dash;
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <blockquote class="markdown-alert markdown-alert-caution" style="border-left: 4px solid #f43f5e; background: rgba(244, 63, 94, 0.1); padding: 1.5rem; border-radius: 8px;">
+                    <strong style="color: #f43f5e; font-size: 1.2rem;">⚠️ ANTI-PATTERN: NGHIÊM CẤM DEV PUSH LOG TRỰC TIẾP VÀO KAFKA</strong><br>
+                    <p style="margin-top: 0.5rem;">Trong hệ thống cũ, Dev có thói quen tự cài thư viện Kafka Producer vào App và bắn thẳng log sự kiện vào Topic. Điều này gây ra <strong>hậu quả nghiêm trọng:</strong></p>
+                    <ul style="margin-left: 1.5rem; margin-top: 0.5rem; color: var(--text-main);">
+                        <li>Log bị phân mảnh: Nửa nằm ở Kafka, nửa nằm ở hệ thống khác, mất hoàn toàn <code>TraceId</code> xâu chuỗi.</li>
+                        <li>Trôi lọt dữ liệu nhạy cảm (PII) do không đi qua bộ lọc tập trung.</li>
+                        <li>App bị phình to (Bloated) và tốn resource để duy trì kết nối Kafka.</li>
+                    </ul>
+                </blockquote>
+                
+                <p style="margin-top: 1.5rem;"><strong>GIẢI PHÁP CHUẨN HÓA (Single Source of Truth):</strong></p>
+                <p>Từ nay, <strong>Dev chỉ có 1 đường ghi log duy nhất:</strong> Ghi log qua `ILogger` và để SDK tự động bắn OTLP lên Collector. <strong>Dev hoàn toàn không cần đụng đến Kafka!</strong></p>
+                <p>Nếu hệ thống (Data Lake, Billing...) cần tiêu thụ log từ Kafka, <strong>DevOps</strong> sẽ cấu hình <code>otel-collector-config.yml</code> tạo ra một Pipeline xuất log từ Collector sang Kafka bằng bộ <code>kafkaexporter</code>. Bằng cách này, log trên Kafka được đảm bảo 100% nhất quán, có chứa <code>TraceId</code> và đã được PII Masking sạch sẽ.</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Kibana & Dashboards & Operational Standard -->
+        <section class="glass-panel animate-up delay-4">
+            <h2><span class="badge qa">QA</span> <span class="badge sa">SA</span> 4. Tiêu Chuẩn Vận Hành Giám Sát (Operational Standard)</h2>
+            <p>Mục đích cuối cùng của Observability không phải là vẽ ra các biểu đồ cho đẹp, mà là thiết lập một <strong>Quy trình Vận hành Khắc phục Sự cố (Incident Response)</strong> chuẩn mực. Khi sự cố xảy ra, các team sẽ phối hợp thông qua 4 lớp phòng ngự (Dashboards) sau:</p>
+            
+            <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                
+                <div style="background: rgba(56, 189, 248, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-blue); position: relative;">
+                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">🚨</div>
+                    <h3 style="color: var(--accent-blue);">LỚP 1: Cảnh Báo Sớm & Tổng Quan (Executive Overview)</h3>
+                    <p><strong>Người dùng:</strong> System Admin, Tech Lead, Product Manager.</p>
+                    <p><strong>Hành động:</strong> Giám sát 24/7. Nhìn vào các chỉ số sinh tồn (KPIs) như <strong>RPS (Lưu lượng)</strong>, <strong>Lỗi 5xx</strong>, và <strong>Độ trễ p99</strong>. Nếu thấy Error Rate tăng vọt hoặc Latency dâng cao thành vệt đỏ trên timeline -> Kích hoạt quy trình báo động toàn team.</p>
+                </div>
+                
+                <div style="background: rgba(192, 132, 252, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-purple); position: relative;">
+                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">🐛</div>
+                    <h3 style="color: var(--accent-purple);">LỚP 2: Bắt Bệnh & Truy Vết (Developer Deep-Dive)</h3>
+                    <p><strong>Người dùng:</strong> Developers.</p>
+                    <p><strong>Hành động:</strong> Nhận được báo động từ Lớp 1, Dev lập tức mở Dashboard này. Tìm ra ngay lập tức <em>Top 10 API nào đang chậm nhất</em> hoặc <em>API nào đang quăng lỗi</em>. Click vào API đó để lấy <code>TraceId</code>, vứt vào khung search để xâu chuỗi toàn bộ luồng chạy của Request, tìm ra chính xác Class/Function hoặc câu Query DB nào gây lỗi. Không cần đoán mò!</p>
+                </div>
+                
+                <div style="background: rgba(16, 185, 129, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-green); position: relative;">
+                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">⚙️</div>
+                    <h3 style="color: var(--accent-green);">LỚP 3: Phân Tích Hạ Tầng Ngầm (Infrastructure & Runtime)</h3>
+                    <p><strong>Người dùng:</strong> DevOps, SRE, Tech Lead.</p>
+                    <p><strong>Hành động:</strong> Nếu Lớp 2 không tìm thấy lỗi do logic code, nguyên nhân có thể do hạ tầng. DevOps dùng Dashboard này để soi xem hệ thống có bị "nghẽn cổ chai" (Bottleneck) hay không: <em>RAM có bị rò rỉ (Memory Leak)? GC (Garbage Collector) có đang bị đơ (Pause)? ThreadPool có bị quá tải không?</em> Từ đó quyết định Scale Up server hay khởi động lại.</p>
+                </div>
+                
+                <div style="background: rgba(244, 63, 94, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-pink); position: relative;">
+                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">🛡️</div>
+                    <h3 style="color: var(--accent-pink);">LỚP 4: Cổng Kiểm Duyệt Chất Lượng (QA Compliance Tracker)</h3>
+                    <p><strong>Người dùng:</strong> QA, PM.</p>
+                    <p><strong>Hành động:</strong> Tránh tình trạng "mất bò mới lo làm chuồng". Trước khi một Service được phép Release lên Production, QA mở Dashboard này lên. Nếu số lượng Service hiển thị không đúng, hoặc Service mới chưa bắn tín hiệu <code>[Compliance=True]</code> -> Lập tức reject bản Release, yêu cầu Dev gắn SDK theo chuẩn.</p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Section 5: Live Dashboard Screenshots -->
+        <section class="glass-panel animate-up" style="animation-delay: 0.5s;">
+            <h2>📸 5. Dashboards Thực Tế (Live Preview)</h2>
+            <p>Đây là giao diện thực tế của 4 Dashboards đã được triển khai lên Kibana. Mỗi Dashboard phục vụ một đối tượng và mục tiêu riêng biệt trong quy trình vận hành.</p>
+
+            <!-- Tab nav -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 2rem; flex-wrap: wrap;">
+                <button class="db-tab active" data-tab="db1" style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">🚨 Executive Overview</button>
+                <button class="db-tab" data-tab="db2" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">🐛 Developer Deep-Dive</button>
+                <button class="db-tab" data-tab="db3" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">⚙️ Infrastructure & Runtime</button>
+                <button class="db-tab" data-tab="db4" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">🛡️ QA Compliance</button>
+            </div>
+
+            <!-- Tab panels -->
+            <div id="db1" class="db-panel" style="margin-top: 1.5rem;">
+                <div style="background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.2); border-radius: 12px; padding: 1.5rem;">
+                    <h3 style="color: var(--accent-blue); margin-bottom: 0.5rem;">LỚP 1 – Executive Overview: System Health</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">KPIs sinh tồn: Tổng request, Error Count, Max/Avg Latency · Request Rate theo thời gian · HTTP Status Distribution</p>
+                    <a href="http://localhost:5601/app/dashboards#/view/executive-overview-dashboard" target="_blank">
+                        <img src="docs/screenshots/executive_overview.png" alt="Executive Overview Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    </a>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
+                </div>
+            </div>
+
+            <div id="db2" class="db-panel" style="margin-top: 1.5rem; display: none;">
+                <div style="background: rgba(192,132,252,0.05); border: 1px solid rgba(192,132,252,0.2); border-radius: 12px; padding: 1.5rem;">
+                    <h3 style="color: var(--accent-purple); margin-bottom: 0.5rem;">LỚP 2 – Developer Deep-Dive: Debug & Optimize</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Top 10 API chậm nhất (p95) · Top 10 API nhiều lỗi nhất · Error timeline · Log stream với TraceId để gỡ lỗi</p>
+                    <a href="http://localhost:5601/app/dashboards#/view/developer-deepdive-dashboard" target="_blank">
+                        <img src="docs/screenshots/developer_deepdive.png" alt="Developer Deep-Dive Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    </a>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
+                </div>
+            </div>
+
+            <div id="db3" class="db-panel" style="margin-top: 1.5rem; display: none;">
+                <div style="background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 1.5rem;">
+                    <h3 style="color: var(--accent-green); margin-bottom: 0.5rem;">LỚP 3 – Infrastructure & Runtime Health</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Memory usage · GC Pause Time · ThreadPool queue · CPU và tài nguyên hệ thống runtime</p>
+                    <a href="http://localhost:5601/app/dashboards#/view/infrastructure-runtime-dashboard" target="_blank">
+                        <img src="docs/screenshots/infrastructure_runtime.png" alt="Infrastructure & Runtime Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    </a>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
+                </div>
+            </div>
+
+            <div id="db4" class="db-panel" style="margin-top: 1.5rem; display: none;">
+                <div style="background: rgba(244,63,94,0.05); border: 1px solid rgba(244,63,94,0.2); border-radius: 12px; padding: 1.5rem;">
+                    <h3 style="color: var(--accent-pink); margin-bottom: 0.5rem;">LỚP 4 – QA Compliance Tracker</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Kiểm tra Service nào đã tích hợp SDK · Coverage chuẩn Observability · Cổng kiểm duyệt trước khi release Production</p>
+                    <a href="http://localhost:5601/app/dashboards#/view/qa-compliance-dashboard" target="_blank">
+                        <img src="docs/screenshots/qa_compliance.png" alt="QA Compliance Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    </a>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
+                </div>
+            </div>
+        </section>
+
+
+            <p>© 2026 Google Antigravity Team. Built for the Modern Microservices Architecture.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'dark',
+            securityLevel: 'loose',
+            fontFamily: 'Inter',
+            flowchart: {
+                curve: 'basis'
+            }
+        });
+
+        // Dashboard screenshot tab switcher
+        document.querySelectorAll('.db-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.tab;
+
+                // Hide all panels
+                document.querySelectorAll('.db-panel').forEach(p => p.style.display = 'none');
+
+                // Show target panel
+                document.getElementById(target).style.display = 'block';
+
+                // Reset all tab styles
+                document.querySelectorAll('.db-tab').forEach(b => {
+                    b.style.background = 'rgba(255,255,255,0.05)';
+                    b.style.borderColor = 'rgba(255,255,255,0.1)';
+                    b.style.color = 'var(--text-muted)';
+                    b.classList.remove('active');
+                });
+
+                // Highlight active tab with matching color
+                const colors = { db1: '56,189,248', db2: '192,132,252', db3: '16,185,129', db4: '244,63,94' };
+                const c = colors[target];
+                btn.style.background = `rgba(${c},0.15)`;
+                btn.style.borderColor = `rgba(${c},0.4)`;
+                btn.style.color = `rgb(${c})`;
+                btn.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

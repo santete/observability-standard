@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kiến Trúc Tiêu Chuẩn</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 2rem; color: #333; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        code { font-family: 'Fira Code', Consolas, monospace; }
+        p > code, li > code { background: #f4f4f4; color: #d63384; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; }
+        th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+        blockquote { border-left: 4px solid #cbd5e1; margin-left: 0; padding: 1rem 1.5rem; color: #475569; background: #f8fafc; border-radius: 0 8px 8px 0; }
+        .mermaid { text-align: center; margin: 2rem 0; padding: 1rem; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; }
+        
+        /* Github Alert styling */
+        .markdown-alert { border-left: 4px solid; padding: 1rem 1.5rem; margin-bottom: 1.5rem; border-radius: 0 8px 8px 0; background-color: #f6f8fa; }
+        .markdown-alert-note { border-color: #0969da; }
+        .markdown-alert-tip { border-color: #1a7f37; background-color: #e6ffec; }
+        .markdown-alert-important { border-color: #8250df; background-color: #f3e8fd; }
+        .markdown-alert-warning { border-color: #9a6700; background-color: #fff8c5; }
+        .markdown-alert-caution { border-color: #d1242f; background-color: #ffebe9; }
+        
+        h1 { border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; color: #0f172a; }
+        h2 { border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2.5rem; color: #1e293b; }
+        h3 { margin-top: 2rem; color: #334155; }
+    </style>
+    <!-- Use specific older version of marked to ensure compatibility with our custom renderer -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div id="content" style="display:none;"></div>
+    <div id="loading" style="text-align:center; padding: 5rem; font-size: 1.2rem; color: #666;">Đang tải tài liệu...</div>
+    
+    <script type="text/markdown" id="md-raw"># Kiến Trúc Observability: Phân Tách Giữa Dev và DevOps
+
+Dưới đây là mô hình kiến trúc High-Level đã được chuẩn hóa. Mô hình này giúp phân định rõ ràng ranh giới trách nhiệm, giao thức giao tiếp giữa team Development (Dev) và team Operations/Platform (DevOps), đảm bảo cả 2 bên có thể làm việc độc lập mà không gây ảnh hưởng lẫn nhau.
+
+## 1. Sơ đồ Kiến trúc (High-Level Architecture)
+
+&#96;&#96;&#96;mermaid
+flowchart TB
+    subgraph Dev["🖥️ Developer Domain (Application Level)"]
+        direction TB
+        App[".NET 8 Application<br>(MvpDemo.Service)"]
+        
+        subgraph Instrumentation["Instrumentation (Auto & Manual)"]
+            direction LR
+            Serilog["Serilog<br>(Structured Logs)"]
+            OTelSDK["OpenTelemetry<br>.NET SDK"]
+            
+            App --> Serilog
+            App --> OTelSDK
+            Serilog -. "Sink" .-> OTelSDK
+        end
+    end
+
+    subgraph Interface["🔄 Standardized Contract (OTLP)"]
+        direction LR
+        gRPC["OTLP / gRPC<br>Port 4317<br>(Traces & Metrics)"]
+        HTTP["OTLP / HTTP<br>Port 4318<br>(Logs)"]
+    end
+
+    subgraph DevOps["☁️ DevOps Domain (Infrastructure Level)"]
+        direction TB
+        Collector["OpenTelemetry Collector<br>(otelcol-contrib)"]
+        
+        subgraph ElasticStack["Elastic Stack"]
+            direction LR
+            ES[("Elasticsearch 8.17<br>(Data Storage)")]
+            Kibana["Kibana 8.17<br>(Dashboards & UI)"]
+            
+            Kibana -. "Query Data" .-> ES
+        end
+        
+        Collector -- "Elasticsearch Exporter<br>(Bulk API 9200)" --> ES
+    end
+
+    %% Connections
+    OTelSDK -- "Traces" --> gRPC
+    OTelSDK -- "Metrics" --> gRPC
+    OTelSDK -- "Logs" --> HTTP
+
+    gRPC --> Collector
+    HTTP --> Collector
+
+    %% Styling
+    classDef dev fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000
+    classDef infra fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#000
+    classDef interface fill:#fff3e0,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5,color:#000
+    classDef db fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef otel fill:#e0f7fa,stroke:#0097a7,stroke-width:2px,color:#000
+
+    class Dev,App dev
+    class DevOps,ElasticStack infra
+    class Interface interface
+    class ES db
+    class Collector,OTelSDK,Serilog otel
+&#96;&#96;&#96;
+
+## 2. Phân Chia Trách Nhiệm (Responsibilities)
+
+Việc áp dụng chuẩn này mang lại một bản "Hợp đồng" rõ ràng giữa 2 team:
+
+### 🛠️ Trách nhiệm của Developer (Dev)
+* **Phạm vi**: Chỉ quản lý Code trong ứng dụng.
+* **Nhiệm vụ**:
+  * Implement và cấu hình &#96;OpenTelemetry SDK&#96; và &#96;Serilog&#96;.
+  * Viết code tuân thủ các chuẩn semantic (ví dụ: gắn đúng các attributes vào Activity/Span, log có đầy đủ PII masking).
+  * Khai báo endpoint trỏ về OTel Collector qua biến môi trường (ví dụ: &#96;Otel__OtlpEndpoint&#96;).
+* **Không cần quan tâm**: Dữ liệu lưu ở đâu? Index name là gì? Kibana cấu hình ra sao? Database backend đang dùng là gì?
+
+### ⚙️ Trách nhiệm của DevOps / SRE
+* **Phạm vi**: Quản lý Data Pipeline và Backend Storage.
+* **Nhiệm vụ**:
+  * Triển khai và vận hành &#96;OpenTelemetry Collector&#96;.
+  * Cấu hình các rules xử lý data: batching, memory limiting, filter data dư thừa.
+  * Lựa chọn, vận hành và scale hệ thống backend (ở đây là Elasticsearch + Kibana).
+* **Không cần quan tâm**: Code .NET viết kiểu gì? Thư viện Serilog dùng version mấy? App chạy kịch bản ra sao? 
+
+## 3. Tại sao chọn OTLP làm Giao thức Chuẩn Hóa (Standard Contract)?
+
+Đường đứt nét màu cam ở giữa chính là điểm sáng nhất của kiến trúc này: **OpenTelemetry Protocol (OTLP)**.
+
+> [!TIP]
+> **Zero Vendor Lock-in**
+>
+> Bằng cách sử dụng OTLP làm chuẩn giao tiếp ở giữa, cả Dev và DevOps đều được "giải phóng":
+> 1. **Nếu Dev muốn đổi ngôn ngữ:** Từ .NET sang Java hay Go, họ chỉ cần dùng SDK của ngôn ngữ đó bắn ra chuẩn OTLP. DevOps không cần cài đặt agent rườm rà.
+> 2. **Nếu DevOps muốn đổi Backend:** Giả sử công ty không muốn dùng Elasticsearch nữa mà chuyển sang Datadog, Grafana, hay Splunk. Dev **KHÔNG CẦN sửa một dòng code nào**. DevOps chỉ cần sửa cấu hình ở &#96;OpenTelemetry Collector&#96; để trỏ Exporter sang đích mới.
+
+## 4. Công Cụ Đề Xuất (Tooling Standard)
+Dựa trên kiến trúc trên, bộ công cụ chuẩn cho dự án được chốt lại như sau:
+- **Ngôn ngữ/Framework**: .NET 8 (C#)
+- **Log framework**: Serilog
+- **Tracing/Metrics SDK**: OpenTelemetry .NET
+- **Chuẩn Giao Tiếp**: OTLP (gRPC trên cổng 4317, HTTP trên cổng 4318)
+- **Data Pipeline/Proxy**: OpenTelemetry Collector (bản &#96;contrib&#96; để có sẵn nhiều Exporter)
+- **Lưu Trữ (Storage)**: Elasticsearch 8.x
+- **Hiển Thị (Visualization)**: Kibana 8.x
+</script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Use textContent to avoid innerHTML escaping issues
+                let raw = document.getElementById('md-raw').textContent.replace(/&#96;/g, '`');
+                
+                // Pre-process GitHub Alerts before marked parses them (since blockquote custom renderer can be tricky)
+                raw = raw.replace(/> \\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\\]/gi, function(match, type) {
+                    return "> **" + type.toUpperCase() + "**\n>";
+                });
+                
+                // Renderer to handle mermaid code blocks
+                const renderer = new marked.Renderer();
+                const originalCodeRenderer = renderer.code.bind(renderer);
+                renderer.code = function(code, language, isEscaped) {
+                    if (language === 'mermaid') {
+                        return '<div class="mermaid">' + code + '</div>';
+                    }
+                    return originalCodeRenderer(code, language, isEscaped);
+                };
+                
+                marked.setOptions({ renderer: renderer, breaks: true, gfm: true });
+                
+                const htmlContent = marked.parse(raw);
+                document.getElementById('content').innerHTML = htmlContent;
+                
+                // Post-process blockquotes for alerts
+                document.querySelectorAll('blockquote').forEach(bq => {
+                    const firstStrong = bq.querySelector('p strong:first-child');
+                    if (firstStrong) {
+                        const type = firstStrong.textContent.trim().toUpperCase();
+                        if (['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].includes(type)) {
+                            bq.classList.add('markdown-alert', 'markdown-alert-' + type.toLowerCase());
+                            firstStrong.style.color = 'inherit';
+                        }
+                    }
+                });
+                
+                mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+                
+                // Show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                document.getElementById('loading').innerHTML = '<span style="color:red;">Lỗi hiển thị tài liệu: ' + error.message + '</span>';
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

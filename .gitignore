@@ -1,0 +1,15 @@
+# Build artifacts
+src/**/bin/
+src/**/obj/
+*.nupkg
+
+# Temp/scratch files
+scratch/
+original_panels_str.txt
+rebuilt_panels_str.txt
+temp_original_panels.json
+sample_lens.json
+
+# Python cache
+__pycache__/
+*.pyc

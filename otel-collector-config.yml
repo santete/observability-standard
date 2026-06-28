@@ -1,0 +1,47 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 5000
+    send_batch_max_size: 10000
+
+exporters:
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"]
+    logs_index: logs-generic.otel-default
+    traces_index: traces-generic.otel-default
+    metrics_index: metrics-generic.otel-default
+    mapping:
+      mode: otel
+    flush:
+      interval: 5s
+    retry:
+      enabled: true
+      max_requests: 3
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [elasticsearch, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [elasticsearch, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [elasticsearch, debug]
+  telemetry:
+    logs:
+      level: info

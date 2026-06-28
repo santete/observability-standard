@@ -1,0 +1,120 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    container_name: obs-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - cluster.name=obs-demo
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks:
+      - obs-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    container_name: obs-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+      - xpack.encryptedSavedObjects.encryptionKey=a]3~#{[}=Fn7x4c^>Cb6Gv7Zz8J5Lm2Rp9Tq1Ws
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status | grep -q 'available'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks:
+      - obs-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    container_name: obs-otel-collector
+    command: ["--config=/etc/otelcol-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otelcol-config.yml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - obs-network
+
+  app:
+    build:
+      context: ./src
+      dockerfile: MvpDemo.Service/Dockerfile
+    container_name: obs-mvp-demo-app
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Demo
+      - ASPNETCORE_URLS=http://+:8080
+      - Otel__OtlpEndpoint=http://otel-collector:4317
+      - Otel__OtlpHttpEndpoint=http://otel-collector:4318
+      - ServiceName=mvp-demo-service
+      - ServiceVersion=1.0.0
+    ports:
+      - "8080:8080"
+    depends_on:
+      - otel-collector
+    networks:
+      - obs-network
+
+  kibana-setup:
+    image: curlimages/curl:latest
+    container_name: obs-kibana-setup
+    depends_on:
+      kibana:
+        condition: service_healthy
+    volumes:
+      - ./kibana/dashboards.ndjson:/tmp/dashboards.ndjson:ro
+    networks:
+      - obs-network
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo 'Waiting for Kibana to be fully ready...'
+        sleep 10
+        echo 'Importing Kibana dashboards...'
+        curl -X POST "http://kibana:5601/api/saved_objects/_import?overwrite=true" \
+          -H "kbn-xsrf: true" \
+          -F file=@/tmp/dashboards.ndjson
+        echo ''
+        echo 'Dashboard import complete!'
+
+  load-generator:
+    image: curlimages/curl:latest
+    container_name: obs-load-generator
+    depends_on:
+      - app
+    volumes:
+      - ./scripts/load-generator.sh:/tmp/load-generator.sh:ro
+    networks:
+      - obs-network
+    entrypoint: ["/bin/sh", "/tmp/load-generator.sh"]
+    profiles:
+      - load-test
+
+volumes:
+  es-data:
+    driver: local
+
+networks:
+  obs-network:
+    driver: bridge
