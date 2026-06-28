@@ -1,14 +1,17 @@
 # 🔭 Observability Standard - MVP Demo
 
-> Dự án mẫu chuẩn hóa Observability cho các dịch vụ .NET 8, tuân thủ [Tài liệu Quy định Tiêu chuẩn Observability](./spec.md) và [Tài liệu Tiêu chuẩn Observability Standard cho Dev & SA](./OBSERVABILITY_STANDARD.md).
+> Dự án mẫu chuẩn hóa Observability cho các dịch vụ .NET 8, tuân thủ [Quy định Tiêu chuẩn Observability](./docs/OBSERVABILITY_STANDARD.md) và [Kiến trúc Tiêu chuẩn](./docs/architecture_standard.md).
+> 
+> 🌐 **Xem tài liệu trình bày trực quan tại:** [https://santete.github.io/observability-standard/](https://santete.github.io/observability-standard/)
 
 ## 📋 Tổng quan
 
 Dự án này cung cấp:
 
-- **Sample Service (.NET 8)**: Dịch vụ quản lý đơn hàng (Order Management) được tích hợp đầy đủ Logs, Metrics, Traces theo chuẩn Observability.
+- **SDK Tiêu chuẩn (`ISC.Observability`)**: Gói thư viện dùng chung cho phép các service .NET tích hợp Observability chỉ với 1 dòng code.
+- **Sample Service (.NET 8)**: Dịch vụ quản lý đơn hàng (Order Management) sử dụng SDK trên.
 - **Hạ tầng Docker**: Stack hoàn chỉnh bao gồm OpenTelemetry Collector, Elasticsearch, Kibana — sẵn sàng demo bằng một lệnh duy nhất.
-- **Kibana Dashboards**: 2 dashboard được tự động import, hiển thị trạng thái sức khỏe hệ thống và công cụ điều tra lỗi.
+- **Kibana Dashboards**: 4 dashboard tiêu chuẩn (Executive, Developer, Infrastructure, QA) được tự động import, phục vụ đầy đủ quy trình vận hành.
 
 ### Kiến trúc
 
@@ -23,6 +26,8 @@ Dự án này cung cấp:
                                                                         │   Kibana (8.17.0)   │
                                                                         │  • Executive View   │
                                                                         │  • Dev Deep-Dive    │
+                                                                        │  • Infra & Runtime  │
+                                                                        │  • QA Compliance    │
                                                                         └─────────────────────┘
 ```
 
@@ -90,18 +95,27 @@ curl http://localhost:8080/api/orders/simulate-error
 
 Sau khi khởi chạy, truy cập [Kibana](http://localhost:5601) → **Dashboard** để xem:
 
-### Dashboard 1: Executive Overview
+### Dashboard 1: Executive Overview (Lớp 1)
 - **KPI Panels**: Total Requests, Error Rate, RPS, Avg Latency
 - **RPS Time-series**: Biểu đồ lưu lượng request theo thời gian
 - **Latency p95/p99**: Biểu đồ độ trễ phân vị
 - **Error Distribution**: Phân bố mã HTTP status
 
-### Dashboard 2: Developer Deep-Dive
+### Dashboard 2: Developer Deep-Dive (Lớp 2)
 - **Top 10 Slowest Endpoints**: Bảng API chậm nhất
 - **Top 10 Error-Prone Endpoints**: Bảng API lỗi nhiều nhất
 - **Error Timeline**: Timeline lỗi theo endpoint
-- **Log Stream**: Xem log theo TraceId
+- **Log Stream & Recent Errors**: Xem log chi tiết kèm TraceId để gỡ lỗi
 
+### Dashboard 3: Infrastructure & Runtime (Lớp 3)
+- **Memory & CPU**: RAM usage, CPU load của service
+- **Garbage Collection (GC)**: GC Pause time, Heap fragmentation
+- **ThreadPool**: Starvation, Queue length
+
+### Dashboard 4: QA Compliance Tracker (Lớp 4)
+- **Service Registration**: Danh sách các service đã tích hợp SDK
+- **Compliance Status**: Đánh giá mức độ tuân thủ tiêu chuẩn Observability
+- **Release Gating**: Thông tin hỗ trợ QA quyết định cho phép release hay không
 ### Tra cứu theo TraceId
 
 1. Vào **Kibana → Discover**
@@ -137,33 +151,31 @@ service:
 
 ```
 observability-standard/
-├── spec.md                          # Tài liệu tiêu chuẩn Observability
+├── docs/                            # Tài liệu & Trang chủ GitHub Pages
+│   ├── index.html                   # HTML Presentation trực quan
+│   ├── ARCHITECTURE_STANDARD.html   # HTML version
+│   ├── OBSERVABILITY_STANDARD.html  # HTML version
+│   └── RUNBOOK_TEMPLATE.html        # HTML version
 ├── docker-compose.yml               # Docker Compose orchestration
 ├── otel-collector-config.yml        # Cấu hình OTel Collector
 ├── README.md                        # Tài liệu hướng dẫn (file này)
 ├── kibana/
-│   └── dashboards.ndjson            # Kibana dashboards (auto-import)
+│   └── dashboards.ndjson            # 4 Kibana dashboards (auto-import)
 ├── scripts/
-│   └── load-generator.sh            # Script tạo traffic giả lập
+│   ├── load-generator.sh            # Script tạo traffic giả lập
+│   └── rebuild_dashboards_v2.py     # Script automation khởi tạo/update dashboard
 └── src/
-    └── MvpDemo.Service/
-        ├── Dockerfile               # Multi-stage Docker build
-        ├── MvpDemo.Service.csproj    # Project file
-        ├── Program.cs               # Entry point + OTel setup
-        ├── appsettings.json         # Configuration
-        ├── appsettings.Demo.json    # Demo environment config
+    ├── ISC.Observability/           # 📦 SDK DÙNG CHUNG CHO TOÀN BỘ BACKEND
+    │   ├── ISC.Observability.csproj
+    │   ├── Extensions/ObservabilityExtensions.cs
+    │   ├── Middleware/CorrelationIdMiddleware.cs
+    │   ├── Middleware/GlobalExceptionMiddleware.cs
+    │   └── Telemetry/PiiMaskingEnricher.cs
+    └── MvpDemo.Service/             # 🛒 ỨNG DỤNG DEMO (SỬ DỤNG SDK)
+        ├── Dockerfile
+        ├── Program.cs               # Chỉ cần gọi builder.AddStandardObservability()
         ├── Controllers/
-        │   └── OrdersController.cs   # REST API endpoints
-        ├── Middleware/
-        │   ├── GlobalExceptionMiddleware.cs
-        │   └── CorrelationIdMiddleware.cs
-        ├── Models/
-        │   └── Order.cs              # Domain model
-        ├── Services/
-        │   └── OrderService.cs       # Business logic
-        └── Telemetry/
-            ├── DiagnosticsConfig.cs   # ActivitySource & Meter
-            └── PiiMaskingEnricher.cs  # PII masking enricher
+        └── Services/
 ```
 
 ## 🔍 Mapping Spec → Implementation
