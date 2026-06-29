@@ -24,6 +24,13 @@ namespace ISC.Observability.Extensions
             var otlpHttpEndpoint = builder.Configuration["Otel:OtlpHttpEndpoint"] ?? "http://localhost:4318";
             var environment = builder.Environment.EnvironmentName;
 
+            // Đọc cấu hình Feature Flags
+            var enableRedis = builder.Configuration.GetValue<bool>("Otel:EnableRedis", false);
+            var enableGrpc = builder.Configuration.GetValue<bool>("Otel:EnableGrpc", false);
+            var enableQuartz = builder.Configuration.GetValue<bool>("Otel:EnableQuartz", false);
+            var enableMongo = builder.Configuration.GetValue<bool>("Otel:EnableMongo", false);
+            var enableMassTransit = builder.Configuration.GetValue<bool>("Otel:EnableMassTransit", false);
+
             // ==========================================
             // QA COMPLIANCE TRACKING
             // ==========================================
@@ -98,7 +105,16 @@ namespace ISC.Observability.Extensions
                         .AddEntityFrameworkCoreInstrumentation(options =>
                         {
                             options.SetDbStatementForText = true;
-                        })
+                        });
+
+                    // Cấu hình linh hoạt qua Feature Flags
+                    if (enableRedis) tracing.AddRedisInstrumentation();
+                    if (enableGrpc) tracing.AddGrpcClientInstrumentation();
+                    if (enableQuartz) tracing.AddQuartzInstrumentation();
+                    if (enableMongo) tracing.AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources");
+                    if (enableMassTransit) tracing.AddSource("MassTransit");
+
+                    tracing
                         .AddSource(serviceName)
                         .AddOtlpExporter(opt =>
                         {
