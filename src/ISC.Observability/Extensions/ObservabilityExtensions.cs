@@ -99,13 +99,9 @@ namespace ISC.Observability.Extensions
                         .AddHttpClientInstrumentation()
                         .AddSqlClientInstrumentation(options =>
                         {
-                            options.SetDbStatementForText = true;
                             options.RecordException = true;
                         })
-                        .AddEntityFrameworkCoreInstrumentation(options =>
-                        {
-                            options.SetDbStatementForText = true;
-                        });
+                        .AddEntityFrameworkCoreInstrumentation();
 
                     // Cấu hình linh hoạt qua Feature Flags
                     if (enableRedis) tracing.AddRedisInstrumentation();

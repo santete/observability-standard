@@ -111,6 +111,22 @@ services:
     profiles:
       - load-test
 
+  redis:
+    image: redis:alpine
+    container_name: obs-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - obs-network
+
+  mongo:
+    image: mongo:latest
+    container_name: obs-mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - obs-network
+
 volumes:
   es-data:
     driver: local
