@@ -108,3 +108,142 @@ Các team Dev phải tự triển khai một lớp Middleware hoặc Log Formatt
 * Số thẻ tín dụng, CCCD/CMND.
 
 *Chế tài:* Bất kỳ service nào đẩy lộ lọt thông tin khách hàng (Clear text) lên hệ thống Log tập trung sẽ bị đánh dấu vi phạm Compliance nghiêm trọng.
+
+---
+
+## 7. Hướng Dẫn Triển Khai Chi Tiết (Implementation Guides)
+
+Để đảm bảo tính nhất quán tuyệt đối, dưới đây là mã nguồn mẫu bắt buộc (Boilerplate) để khởi tạo Observability cho các ngôn ngữ phổ biến ngoài .NET.
+
+### 7.1. Dành Cho Node.js (Express / NestJS)
+
+**Cài đặt thư viện:**
+```bash
+npm install @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-trace-otlp-grpc @opentelemetry/exporter-metrics-otlp-grpc winston
+```
+
+**File khởi tạo (`tracing.js`):** File này phải được chạy **ĐẦU TIÊN** trước khi import bất kỳ thư viện nào khác (VD: `node --require ./tracing.js app.js`).
+```javascript
+const { NodeSDK } = require('@opentelemetry/sdk-node');
+const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
+const { OTLPMetricExporter } = require('@opentelemetry/exporter-metrics-otlp-grpc');
+const { Resource } = require('@opentelemetry/resources');
+const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+
+// BẮT BUỘC: Khai báo đúng chuẩn Semantic Conventions
+const resource = new Resource({
+  [SemanticResourceAttributes.SERVICE_NAME]: process.env.SERVICE_NAME || 'nodejs-service',
+  [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
+  'deployment.environment': process.env.NODE_ENV || 'development'
+});
+
+const sdk = new NodeSDK({
+  resource: resource,
+  traceExporter: new OTLPTraceExporter({
+    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317'
+  }),
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: new OTLPMetricExporter({ url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317' })
+  }),
+  // BẮT BUỘC: Tự động cấy ghép để thu thập HTTP/DB và truyền W3C TraceContext
+  instrumentations: [getNodeAutoInstrumentations()]
+});
+
+sdk.start();
+```
+
+**Chuẩn hóa Log (Dùng Winston):**
+```javascript
+const winston = require('winston');
+
+// BẮT BUỘC: Filter che mờ PII
+const piiMaskingFormat = winston.format((info) => {
+  if (info.message) {
+    // Che email cơ bản
+    info.message = info.message.replace(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi, '***@***.***');
+    // Che số điện thoại
+    info.message = info.message.replace(/(\+84|0)[3|5|7|8|9][0-9]{8}/g, '090****XXX');
+  }
+  return info;
+});
+
+const logger = winston.createLogger({
+  level: 'info', // BẮT BUỘC: Lọc nhiễu ở mức INFO
+  format: winston.format.combine(
+    piiMaskingFormat(),
+    winston.format.json() // BẮT BUỘC: Log ra chuẩn JSON
+  ),
+  transports: [
+    new winston.transports.Console() 
+    // Trong thực tế Node.js, nên dùng winston-transport kết nối với OTLP
+  ]
+});
+```
+
+### 7.2. Dành Cho Golang (Gin / Fiber)
+
+**Cài đặt thư viện:**
+```bash
+go get go.opentelemetry.io/otel \
+       go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc \
+       go.opentelemetry.io/otel/sdk/resource \
+       go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin \
+       go.uber.org/zap
+```
+
+**File khởi tạo OTel:**
+```go
+package observability
+
+import (
+	"context"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+)
+
+// BẮT BUỘC: Hàm này phải được gọi khi start app
+func InitTracer(serviceName string, environment string) func(context.Context) error {
+	exporter, err := otlptracegrpc.New(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+    // BẮT BUỘC: Semantic Conventions
+	resources := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(serviceName),
+		semconv.DeploymentEnvironment(environment),
+	)
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resources),
+	)
+	
+	// Set làm global tracer để W3C Context truyền tự động
+	otel.SetTracerProvider(tp)
+	return tp.Shutdown
+}
+```
+
+**Tích hợp vào Gin Router (Auto-Instrumentation):**
+```go
+import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
+func main() {
+    // ... gọi InitTracer ...
+
+    r := gin.Default()
+    // BẮT BUỘC: Gắn middleware này để tự động đo latency, lấy TraceId và truyền Context
+    r.Use(otelgin.Middleware("golang-service"))
+
+    r.GET("/ping", func(c *gin.Context) {
+        c.JSON(200, gin.H{"message": "pong"})
+    })
+    r.Run()
+}
+```
