@@ -9,8 +9,13 @@
     <Version>1.0.0</Version>
     <Authors>Google Antigravity Team</Authors>
     <Description>Standardized Observability SDK for .NET 8 Microservices. Provides pre-configured OpenTelemetry and Serilog integration for Logs, Traces, and Metrics.</Description>
-    <RepositoryUrl>https://github.com/company/isc-observability</RepositoryUrl>
+    <RepositoryUrl>https://github.com/santete/observability-standard</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
