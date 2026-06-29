@@ -90,6 +90,15 @@ namespace ISC.Observability.Extensions
                             options.RecordException = true;
                         })
                         .AddHttpClientInstrumentation()
+                        .AddSqlClientInstrumentation(options =>
+                        {
+                            options.SetDbStatementForText = true;
+                            options.RecordException = true;
+                        })
+                        .AddEntityFrameworkCoreInstrumentation(options =>
+                        {
+                            options.SetDbStatementForText = true;
+                        })
                         .AddSource(serviceName)
                         .AddOtlpExporter(opt =>
                         {
