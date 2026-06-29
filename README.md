@@ -155,7 +155,8 @@ observability-standard/
 │   ├── index.html                   # HTML Presentation trực quan
 │   ├── ARCHITECTURE_STANDARD.html   # HTML version
 │   ├── OBSERVABILITY_STANDARD.html  # HTML version
-│   └── RUNBOOK_TEMPLATE.html        # HTML version
+│   ├── RUNBOOK_TEMPLATE.html        # HTML version
+│   └── POLYGLOT_CONTRACT.md         # Quy chuẩn Data cho Đa Ngôn Ngữ (Node, Go...)
 ├── docker-compose.yml               # Docker Compose orchestration
 ├── otel-collector-config.yml        # Cấu hình OTel Collector
 ├── README.md                        # Tài liệu hướng dẫn (file này)
