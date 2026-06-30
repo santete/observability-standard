@@ -42,6 +42,31 @@ services:
     networks:
       - obs-network
 
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.17.0
+    container_name: obs-apm-server
+    environment:
+      - output.elasticsearch.hosts=["http://elasticsearch:9200"]
+      - apm-server.host="0.0.0.0:8200"
+      - setup.kibana.host="http://kibana:5601"
+      - setup.template.settings.index.number_of_replicas=0
+      - xpack.fleet.enabled=false
+    ports:
+      - "8200:8200"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8200/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - obs-network
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.114.0
     container_name: obs-otel-collector
@@ -70,9 +95,12 @@ services:
       - ServiceName=mvp-demo-service
       - ServiceVersion=1.0.0
     ports:
-      - "8080:8080"
+      - "5080:8080"
     depends_on:
-      - otel-collector
+      otel-collector:
+        condition: service_started
+      kafka-setup:
+        condition: service_completed_successfully
     networks:
       - obs-network
 
@@ -124,6 +152,41 @@ services:
     container_name: obs-mongo
     ports:
       - "27017:27017"
+    networks:
+      - obs-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: obs-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - obs-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: obs-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - obs-network
+
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: obs-kafka-setup
+    depends_on:
+      - kafka
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b kafka:9092 1 20 && \
+                       kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic test-topic'"
     networks:
       - obs-network
 

@@ -13,18 +13,10 @@ processors:
     send_batch_max_size: 10000
 
 exporters:
-  elasticsearch:
-    endpoints: ["http://elasticsearch:9200"]
-    logs_index: logs-generic.otel-default
-    traces_index: traces-generic.otel-default
-    metrics_index: metrics-generic.otel-default
-    mapping:
-      mode: otel
-    flush:
-      interval: 5s
-    retry:
-      enabled: true
-      max_requests: 3
+  otlp/elastic:
+    endpoint: "apm-server:8200"
+    tls:
+      insecure: true
   debug:
     verbosity: basic
 
@@ -33,15 +25,15 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [elasticsearch, debug]
+      exporters: [otlp/elastic, debug]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [elasticsearch, debug]
+      exporters: [otlp/elastic, debug]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [elasticsearch, debug]
+      exporters: [otlp/elastic, debug]
   telemetry:
     logs:
       level: info

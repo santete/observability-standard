@@ -9,12 +9,17 @@
 
   <ItemGroup>
     <!-- Observability Shared SDK -->
+    <PackageReference Include="MassTransit" Version="8.3.1" />
+    <PackageReference Include="MassTransit.Kafka" Version="8.3.1" />
     <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
+    <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="3.0.0" />
     <PackageReference Include="StackExchange.Redis" Version="3.0.11" />
     <ProjectReference Include="..\ISC.Observability\ISC.Observability.csproj" />
 
-    <!-- Health Checks -->
     <PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="8.0.1" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="8.0.1" />
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="8.0.1" />
+    <PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="8.0.1" />
   </ItemGroup>
 
 </Project>

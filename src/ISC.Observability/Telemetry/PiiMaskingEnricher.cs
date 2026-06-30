@@ -1,5 +1,6 @@
 using Serilog.Core;
 using Serilog.Events;
+using System.Collections.Concurrent;
 
 namespace ISC.Observability.Telemetry;
 
@@ -7,8 +8,8 @@ namespace ISC.Observability.Telemetry;
 /// Serilog enricher that automatically masks PII (Personally Identifiable Information)
 /// in log properties. Compliant with spec section 2.4.
 /// 
-/// Masks properties whose names contain sensitive keywords:
-/// password, token, secret, creditcard, pin, otp, authorization
+/// Performance Optimized: Uses ConcurrentDictionary to cache property name checks
+/// to prevent garbage collection pressure from string allocations during heavy logging.
 /// </summary>
 public class PiiMaskingEnricher : ILogEventEnricher
 {
@@ -22,29 +23,43 @@ public class PiiMaskingEnricher : ILogEventEnricher
         "authorization", "auth"
     };
 
+    // Cache kết quả kiểm tra property name (Zero-allocation cho các lần kiểm tra sau)
+    private static readonly ConcurrentDictionary<string, bool> SensitivityCache = new(StringComparer.Ordinal);
+
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        var propertiesToMask = new List<string>();
+        List<string>? propertiesToMask = null;
 
         foreach (var property in logEvent.Properties)
         {
             if (IsSensitiveProperty(property.Key))
             {
+                propertiesToMask ??= new List<string>();
                 propertiesToMask.Add(property.Key);
             }
         }
 
-        foreach (var propName in propertiesToMask)
+        if (propertiesToMask != null)
         {
-            var originalValue = logEvent.Properties[propName].ToString().Trim('"');
-            var maskedValue = MaskValue(originalValue);
-            logEvent.AddOrUpdateProperty(
-                propertyFactory.CreateProperty(propName, maskedValue));
+            foreach (var propName in propertiesToMask)
+            {
+                var originalValue = logEvent.Properties[propName].ToString().Trim('"');
+                var maskedValue = MaskValue(originalValue);
+                logEvent.AddOrUpdateProperty(
+                    propertyFactory.CreateProperty(propName, maskedValue));
+            }
         }
     }
 
     private static bool IsSensitiveProperty(string propertyName)
     {
+        // Nếu đã từng kiểm tra property này, lấy từ Cache ra luôn (O(1) & Zero Allocation)
+        return SensitivityCache.GetOrAdd(propertyName, EvaluateSensitivity);
+    }
+
+    private static bool EvaluateSensitivity(string propertyName)
+    {
+        // Chỉ cấp phát bộ nhớ trong lần đầu tiên bắt gặp property name này
         var normalized = propertyName.Replace("_", "").Replace("-", "").Replace(".", "");
         return SensitiveKeywords.Any(keyword =>
             normalized.Contains(keyword, StringComparison.OrdinalIgnoreCase));
@@ -68,6 +83,6 @@ public class PiiMaskingEnricher : ILogEventEnricher
             return "****";
 
         // For other values, show first char and last char
-        return $"{value[0]}{'*'.ToString().PadRight(value.Length - 2, '*')}{value[^1]}";
+        return $"{value[0]}{new string('*', value.Length - 2)}{value[^1]}";
     }
 }

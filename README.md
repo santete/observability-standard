@@ -8,7 +8,7 @@
 
 Dự án này cung cấp:
 
-- **SDK Tiêu chuẩn (`ISC.Observability`)**: Gói thư viện dùng chung cho phép các service .NET tích hợp Observability chỉ với 1 dòng code.
+- **SDK Tiêu chuẩn (`ISC.Observability`)**: Gói thư viện dùng chung cho phép các service .NET tích hợp Observability chỉ với 1 dòng code. Hỗ trợ đa dạng Instrumentations (Redis, Mongo, Kafka, SQL, gRPC...). (👉 **[Xem Hướng dẫn sử dụng & Cấu hình SDK](src/ISC.Observability/README.md)**)
 - **Sample Service (.NET 8)**: Dịch vụ quản lý đơn hàng (Order Management) sử dụng SDK trên.
 - **Hạ tầng Docker**: Stack hoàn chỉnh bao gồm OpenTelemetry Collector, Elasticsearch, Kibana — sẵn sàng demo bằng một lệnh duy nhất.
 - **Kibana Dashboards**: 4 dashboard tiêu chuẩn (Executive, Developer, Infrastructure, QA) được tự động import, phục vụ đầy đủ quy trình vận hành.
