@@ -22,6 +22,7 @@ def md_to_html(md_path, html_path, title):
         th {{ background-color: #f8fafc; font-weight: 600; color: #475569; }}
         blockquote {{ border-left: 4px solid #cbd5e1; margin-left: 0; padding: 1rem 1.5rem; color: #475569; background: #f8fafc; border-radius: 0 8px 8px 0; }}
         .mermaid {{ text-align: center; margin: 2rem 0; padding: 1rem; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; }}
+        img {{ max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; display: block; margin: 2rem auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
         
         /* Github Alert styling */
         .markdown-alert {{ border-left: 4px solid; padding: 1rem 1.5rem; margin-bottom: 1.5rem; border-radius: 0 8px 8px 0; background-color: #f6f8fa; }}
