@@ -172,6 +172,12 @@ Một dòng log được coi là đủ thông tin phục vụ điều tra phải
 
 Tracing là công cụ đắc lực nhất để giám sát luồng request đi qua các kiến trúc phân tán hoặc các tầng logic phức tạp trong một ứng dụng.
 
+### 4.1. Trực Quan Hóa Distributed Tracing (Multi-Instrument)
+
+Nhờ sức mạnh của Auto-Instrumentation, toàn bộ luồng request chạy qua HTTP, Message Broker (Kafka), Cache (Redis), và Database (MongoDB/SQL) đều được tự động xâu chuỗi liền mạch trên cùng một biểu đồ thác nước (Waterfall). Dev có thể theo dõi chính xác thời gian thực thi của từng lớp hệ thống mà không cần viết code truyền TraceId thủ công.
+
+![Distributed Tracing Waterfall](screenshots/tracing-multi-instrument.jpg)
+
 &#96;&#96;&#96;
 Request ────► [Gateway Span]
                  │
@@ -183,7 +189,7 @@ Request ────► [Gateway Span]
                            └────► [Call Payment API Span] (Child)
 &#96;&#96;&#96;
 
-### 4.1. Truyền dẫn Ngữ cảnh (Context Propagation)
+### 4.2. Truyền dẫn Ngữ cảnh (Context Propagation)
 *   **Chuẩn W3C Trace Context:** Bắt buộc sử dụng chuẩn W3C (&#96;traceparent&#96; header) khi truyền thông tin trace qua HTTP/gRPC.
     *   Định dạng: &#96;00-{trace_id}-{parent_id}-{trace_flags}&#96;
 *   **Không đứt chuỗi:** Khi gọi các service ngoài (qua HTTP Client) hoặc đẩy message vào Queue (RabbitMQ, Kafka), Developer phải dùng thư viện tự động chèn (inject) thông tin trace context vào Header của request/message gửi đi. Ở phía nhận, service đích phải trích xuất (extract) context này để làm Span cha (Parent Span) cho luồng xử lý tiếp theo.
@@ -213,7 +219,7 @@ Request ────► [Gateway Span]
 > &#96;&#96;&#96;
 > Nếu bỏ qua bước này, chuỗi Trace End-to-End sẽ bị đứt vỡ thành 2 mảnh rời rạc: một trace kết thúc mù tịt tại Producer và một trace mới toanh mồ côi bắt đầu tại Consumer, khiến việc debug luồng bất đồng bộ trở nên vô vọng.
 
-### 4.2. Khi nào cần tạo Custom Span?
+### 4.3. Khi nào cần tạo Custom Span?
 Auto-instrumentation của OpenTelemetry chỉ tự động bắt vết ở các rìa ứng dụng (vào/ra HTTP, SQL, Redis). Developer cần tạo **Custom Span** trong các trường hợp sau:
 1.  **Logic nghiệp vụ nặng:** Các hàm xử lý tính toán phức tạp, xử lý ảnh, mã hóa dữ liệu mất hơn 10ms.
 2.  **Khối công việc nền tảng (Background/Queue Worker):** Khi tiêu thụ một tin nhắn từ hàng đợi và chạy một chuỗi logic nội bộ dài.
@@ -246,7 +252,7 @@ public async Task ProcessOrderAsync(Order order)
 }
 &#96;&#96;&#96;
 
-### 4.3. Quy tắc gắn Tag (Attributes) trên Spans
+### 4.4. Quy tắc gắn Tag (Attributes) trên Spans
 *   **Chỉ gắn các Tag có lực lượng thấp (Low Cardinality):** Ví dụ: &#96;order.status&#96;, &#96;payment.method&#96;, &#96;tenant.id&#96;.
 *   **Không gắn dữ liệu quá lớn (High Cardinality/Unbounded):** Tuyệt đối không đưa HTTP Request/Response Body, file nhị phân, ảnh Base64, hoặc danh sách hàng nghìn phần tử vào Tag của Span. Điều này gây phình to dung lượng lưu trữ của APM cực kỳ nhanh và làm chậm tiến trình ứng dụng.
 *   **Đặt tên Tag có cấu trúc:** Sử dụng dấu chấm để phân cấp thư mục tên (ví dụ: &#96;http.status_code&#96;, &#96;db.system&#96;, &#96;custom.order.id&#96;).
