@@ -1,7 +1,7 @@
-# 📖 Mẫu Sổ Tay Xử Lý Sự Cố (Runbook Template)
+# 📖 Mẫu Quy Trình Vận Hành & Xử Lý Sự Cố (SOP & Runbook Template)
 
 > [!NOTE]
-> **Mục đích:** Tài liệu này cung cấp các bước "cầm tay chỉ việc" để xử lý sự cố nhanh chóng. Yêu cầu viết ngắn gọn, tập trung vào hành động (Action-oriented), không giải thích lý thuyết dài dòng.
+> **Mục đích:** Tài liệu này kết hợp cả **Runbook** (Cách xử lý sự cố khẩn cấp) và **SOP** (Quy trình vận hành tiêu chuẩn hàng ngày). Yêu cầu viết ngắn gọn, tập trung vào hành động (Action-oriented), copy-paste lệnh chạy được ngay.
 
 ## 1. Thông Tin Dịch Vụ (Service Metadata)
 - **Tên Service:** `[Tên Microservice - VD: MvpDemo.OrderService]`
@@ -11,7 +11,24 @@
 
 ---
 
-## 2. Danh Sách Cảnh Báo & Cách Xử Lý (Alerts & Mitigation)
+## 2. Quy Trình Vận Hành Tiêu Chuẩn (SOP - Hàng ngày/Chủ động)
+*Dành cho các tác vụ thay đổi, bảo trì hệ thống (Planned Actions).*
+
+### 2.1. Triển khai (Deploy) & Khôi phục (Rollback)
+- **Deploy:** Chạy Pipeline `Deploy-Prod` trên [GitLab CI / Jenkins].
+- **Rollback:** Trong trường hợp khẩn cấp, chạy Pipeline `Rollback-Prod` và điền số version an toàn trước đó.
+
+### 2.2. Tăng/Giảm Tài Nguyên (Scaling)
+- **Lệnh tăng Replicas thủ công:** `kubectl scale deployment <tên-service> --replicas=5 -n prod`
+
+### 2.3. Cập Nhật Cấu Hình (Config)
+- Thay đổi cấu hình tại repo GitOps, tạo Pull Request.
+- Cấu hình sẽ được ArgoCD tự động apply trong vòng 3 phút sau khi Merge PR.
+
+---
+
+## 3. Danh Sách Cảnh Báo & Xử Lý Sự Cố (Runbook - Phản ứng)
+*Dành cho xử lý khi nhận được tin nhắn Alert đỏ lòm giữa đêm (Reactive Actions).*
 
 ### 🚨 Cảnh Báo 1: Tỉ Lệ Lỗi 5xx Tăng Đột Biến (High Error Rate)
 - **Kích hoạt khi:** Tỉ lệ lỗi HTTP 5xx vượt quá **1%** trong 5 phút.
@@ -28,11 +45,11 @@
 
 #### 🛠️ Bước 2: Khắc Phục Tạm Thời (Mitigation)
 *Chỉ chọn 1 phương án phù hợp để cầm máu nhanh nhất:*
-- **Phương án A (Rollback):** Nếu vừa Release version mới trong vòng 1 tiếng, lập tức Rollback về version cũ qua CI/CD pipeline.
-- **Phương án B (Circuit Breaker):** Nếu API bên thứ 3 (ví dụ Cổng thanh toán) bị sập, kích hoạt cấu hình chặn luồng (Force Circuit Breaker Open) để không làm treo toàn bộ app.
+- **Phương án A (Rollback):** Nếu vừa Release version mới trong vòng 1 tiếng, lập tức Rollback về version cũ theo bước [2.1](#21-triển-khai-deploy--khôi-phục-rollback).
+- **Phương án B (Circuit Breaker):** Kích hoạt chặn luồng (Force Circuit Breaker Open) để không làm treo toàn bộ app.
 
 #### 📞 Bước 3: Leo Thang (Escalation)
-- Nếu sau 15 phút vẫn không tìm ra nguyên nhân hoặc không thể khắc phục: Bấm gọi số Hotline của **Data/DBA Team** hoặc **Platform Team**.
+- Nếu sau 15 phút vẫn không tìm ra nguyên nhân: Gọi số Hotline của **Data/DBA Team** hoặc **Platform Team**.
 
 ---
 
@@ -43,18 +60,18 @@
 #### 🔍 Bước 1: Điều Tra
 1. Mở **[Infrastructure Dashboard](#)**.
 2. Kiểm tra biểu đồ **Memory/CPU Usage**:
-   - Nếu RAM tăng bậc thang (Memory Leak) -> Báo Dev chuẩn bị fix bug rò rỉ.
-   - Nếu CPU tăng vọt cùng với chỉ số RPS (Traffic tăng) -> Đơn giản là quá tải tự nhiên.
+   - Nếu RAM tăng bậc thang (Memory Leak) -> Báo Dev chuẩn bị fix bug.
+   - Nếu CPU tăng vọt cùng RPS -> Quá tải tự nhiên.
 
 #### 🛠️ Bước 2: Khắc Phục Tạm Thời
-- Vào Kubernetes/Rancher, tăng số lượng Replica (Scale Out) từ `3` lên `5` Pods.
+- Scale out thủ công lên 5 Pods theo hướng dẫn ở bước [2.2](#22-tănggiảm-tài-nguyên-scaling).
 - Nếu RAM đầy, chủ động Restart Pod thủ công để giải phóng RAM tạm thời.
 
 ---
 
-## 3. Quy Trình Sau Sự Cố (Post-Incident)
-- Bất kỳ sự cố `SEV-1` nào xảy ra đều **bắt buộc** phải tổ chức họp Post-Mortem (Mổ xẻ sự cố) trong vòng 48h.
-- Cập nhật lại chính tài liệu Runbook này nếu các bước xử lý trên bị thiếu hoặc sai.
+## 4. Quy Trình Sau Sự Cố (Post-Incident)
+- Bất kỳ sự cố `SEV-1` nào xảy ra đều **bắt buộc** phải tổ chức họp Post-Mortem trong vòng 48h.
+- Cập nhật lại chính tài liệu này nếu các bước xử lý trên bị thiếu hoặc sai.
 
 > [!TIP]
 > **Quy tắc vàng:** Sửa lỗi là việc của ngày mai. Việc của người trực On-call đêm nay là "Cầm máu" và đưa hệ thống hoạt động trở lại nhanh nhất có thể (Bằng cách Rollback, Restart, hoặc Scale up).
