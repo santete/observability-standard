@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics.Metrics;
+using System.Reflection;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -19,7 +20,13 @@ namespace ISC.Observability.Extensions
         public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName)
         {
             var serviceName = builder.Configuration["ServiceName"] ?? defaultServiceName;
-            var serviceVersion = builder.Configuration["ServiceVersion"] ?? "1.0.0";
+            
+            var assembly = Assembly.GetEntryAssembly();
+            var autoVersion = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
+                              ?? assembly?.GetName().Version?.ToString() 
+                              ?? "1.0.0";
+            var serviceVersion = builder.Configuration["ServiceVersion"] ?? Environment.GetEnvironmentVariable("APP_VERSION") ?? autoVersion;
+            
             var otlpGrpcEndpoint = builder.Configuration["Otel:OtlpEndpoint"] ?? "http://localhost:4317";
             var otlpHttpEndpoint = builder.Configuration["Otel:OtlpHttpEndpoint"] ?? "http://localhost:4318";
             var environment = builder.Environment.EnvironmentName;
