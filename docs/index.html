@@ -393,7 +393,7 @@
                     <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">🛡️</div>
                     <h3 style="color: var(--accent-pink);">LỚP 4: Cổng Kiểm Duyệt Chất Lượng (QA Compliance Tracker)</h3>
                     <p><strong>Người dùng:</strong> QA, PM.</p>
-                    <p><strong>Hành động:</strong> Tránh tình trạng "mất bò mới lo làm chuồng". Trước khi một Service được phép Release lên Production, QA mở Dashboard này lên. Nếu số lượng Service hiển thị không đúng, hoặc Service mới chưa bắn tín hiệu <code>[Compliance=True]</code> -> Lập tức reject bản Release, yêu cầu Dev gắn SDK theo chuẩn.</p>
+                    <p><strong>Hành động:</strong> QA Compliance Tracker được dùng để giám sát mức độ tuân thủ liên tục. Dữ liệu từ Dashboard này (như việc Service đã bắn tín hiệu <code>[Compliance=True]</code> hay chưa) sẽ được dùng làm bằng chứng (evidence). Cổng kiểm soát chính thức đưa ra quyết định chặn/cho phép Release là <strong>Quality Gate 2 (Pre-Operation)</strong>.</p>
                 </div>
 
             </div>
