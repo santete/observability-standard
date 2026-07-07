@@ -52,17 +52,12 @@ namespace ISC.Observability.Extensions
             // 1. SERILOG CONFIGURATION (Structured Logging)
             // ==========================================
             
-            // Tự động detect các môi trường Production (như Prod, PRD, Production)
-            var isProduction = environment.StartsWith("Prod", StringComparison.OrdinalIgnoreCase) || 
-                               environment.Equals("PRD", StringComparison.OrdinalIgnoreCase);
-                               
-            var defaultConsoleLevel = isProduction ? LogEventLevel.Warning : LogEventLevel.Information;
-            
-            // Cho phép Dev override cứng thông qua appsettings.json
+            // Console Sink mặc định luôn là Information. 
+            // Nếu Dev muốn tiết kiệm I/O ở Production, họ BẮT BUỘC phải tự khai báo minh bạch vào appsettings.Production.json
             var consoleLevelStr = builder.Configuration["Serilog:Console:RestrictedToMinimumLevel"];
             var consoleLevel = Enum.TryParse<LogEventLevel>(consoleLevelStr, true, out var parsedLevel) 
                 ? parsedLevel 
-                : defaultConsoleLevel;
+                : LogEventLevel.Information;
 
             // SDK đặt mặc định hợp lý, Dev có thể override qua appsettings.json section "Serilog"
             var logConfig = new LoggerConfiguration()
