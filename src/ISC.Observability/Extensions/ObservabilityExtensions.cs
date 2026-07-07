@@ -89,6 +89,9 @@ namespace ISC.Observability.Extensions
                                 // Xóa bỏ ngoặc kép dư thừa do đặc thù format của Serilog
                                 var path = requestPathValue.ToString().Trim('"');
                                 return path.Equals("/health", StringComparison.OrdinalIgnoreCase) || 
+                                       path.Equals("/healthchecks", StringComparison.OrdinalIgnoreCase) || 
+                                       path.Equals("/healthcheck", StringComparison.OrdinalIgnoreCase) || 
+                                       path.Equals("/healthz", StringComparison.OrdinalIgnoreCase) || 
                                        path.Equals("/ready", StringComparison.OrdinalIgnoreCase) || 
                                        path.Equals("/alive", StringComparison.OrdinalIgnoreCase) ||
                                        path.Equals("/hc", StringComparison.OrdinalIgnoreCase);
