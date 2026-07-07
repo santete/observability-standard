@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,6 +11,7 @@ using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.OpenTelemetry;
+using ISC.Observability.Metadata;
 using ISC.Observability.Middleware;
 using ISC.Observability.Telemetry;
 
@@ -17,7 +19,7 @@ namespace ISC.Observability.Extensions
 {
     public static class ObservabilityExtensions
     {
-        public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null, bool enableHealthCheckFilter = true)
+        public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null)
         {
             var serviceName = builder.Configuration["ServiceName"] ?? defaultServiceName;
             
@@ -76,41 +78,17 @@ namespace ISC.Observability.Extensions
                 .WriteTo.Console(
                     formatter: new Serilog.Formatting.Compact.RenderedCompactJsonFormatter(),
                     restrictedToMinimumLevel: consoleLevel)
-                // Cấu hình OpenTelemetry Sink qua Sub-logger để lọc log riêng biệt
-                .WriteTo.Logger(lc => 
+                // Cấu hình OpenTelemetry Sink: Bắn log qua OTLP về OTel Collector
+                .WriteTo.OpenTelemetry(options =>
                 {
-                    if (enableHealthCheckFilter)
+                    options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
+                    options.Protocol = OtlpProtocol.HttpProtobuf;
+                    options.ResourceAttributes = new Dictionary<string, object>
                     {
-                        // Loại bỏ các log liên quan đến endpoint healthcheck để giảm nhiễu trên Kibana
-                        lc.Filter.ByExcluding(logEvent => 
-                        {
-                            if (logEvent.Properties.TryGetValue("RequestPath", out var requestPathValue))
-                            {
-                                // Xóa bỏ ngoặc kép dư thừa do đặc thù format của Serilog
-                                var path = requestPathValue.ToString().Trim('"');
-                                return path.Equals("/health", StringComparison.OrdinalIgnoreCase) || 
-                                       path.Equals("/healthchecks", StringComparison.OrdinalIgnoreCase) || 
-                                       path.Equals("/healthcheck", StringComparison.OrdinalIgnoreCase) || 
-                                       path.Equals("/healthz", StringComparison.OrdinalIgnoreCase) || 
-                                       path.Equals("/ready", StringComparison.OrdinalIgnoreCase) || 
-                                       path.Equals("/alive", StringComparison.OrdinalIgnoreCase) ||
-                                       path.Equals("/hc", StringComparison.OrdinalIgnoreCase);
-                            }
-                            return false;
-                        });
-                    }
-                    
-                    lc.WriteTo.OpenTelemetry(options =>
-                    {
-                        options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
-                        options.Protocol = OtlpProtocol.HttpProtobuf;
-                        options.ResourceAttributes = new Dictionary<string, object>
-                        {
-                            ["service.name"] = serviceName,
-                            ["service.version"] = serviceVersion,
-                            ["deployment.environment"] = environment
-                        };
-                    });
+                        ["service.name"] = serviceName,
+                        ["service.version"] = serviceVersion,
+                        ["deployment.environment"] = environment
+                    };
                 });
 
             // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
@@ -197,6 +175,21 @@ namespace ISC.Observability.Extensions
             app.UseMiddleware<GlobalExceptionMiddleware>();
             app.UseSerilogRequestLogging(options =>
             {
+                // Type-safe log level control: Hạ cấp log thay vì xóa sổ
+                options.GetLevel = (httpContext, elapsed, ex) =>
+                {
+                    // Lỗi luôn phải báo động, bất kể endpoint nào
+                    if (ex != null || httpContext.Response.StatusCode >= 500)
+                        return LogEventLevel.Error;
+
+                    // Kiểm tra TYPE metadata (compile-time safe, zero string comparison)
+                    var endpoint = httpContext.GetEndpoint();
+                    if (endpoint?.Metadata.GetMetadata<SuppressRequestLoggingMetadata>() != null)
+                        return LogEventLevel.Verbose; // Hạ cấp, không xóa sổ
+
+                    return LogEventLevel.Information;
+                };
+
                 options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
                 {
                     diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
