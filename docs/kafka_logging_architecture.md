@@ -35,6 +35,7 @@ graph TD
 2. **Cạnh tranh tài nguyên:** Việc serialize log và giao tiếp Kafka tranh giành trực tiếp CPU và RAM với chức năng nghiệp vụ cốt lõi.
 3. **Hiệu ứng Domino (Cascading Failures):** Nếu Kafka sập hoặc nghẽn, bộ đệm trong App sẽ phình to gây **Out of Memory (OOM)**, kéo sập toàn bộ ứng dụng chỉ vì tính năng ghi log.
 4. **Trói buộc công nghệ (Vendor Lock-in):** Khó thay đổi hệ thống đích (như đổi sang Kinesis hay S3) mà không sửa code.
+5. **Đứt gãy Traceability (Mất tương quan Log-Trace):** Observability hiện đại yêu cầu Log phải được nhúng `TraceId` và `SpanId`. Các thư viện Kafka Sink truyền thống thường chỉ ném log thô dạng JSON vào Topic, làm rớt mất Context của Distributed Tracing. Hậu quả là khi có lỗi (Exception) trên Kibana, Dev không thể bấm vào để xem toàn bộ luồng chạy của Request (Trace) xuyên qua các Microservices.
 
 ---
 
@@ -79,6 +80,7 @@ graph TD
 1. **Offloading hoàn hảo:** OTel Collector (viết bằng Go) nhận trách nhiệm nặng nề nhất (Nén, batching, retry). App .NET nhẹ bẫng.
 2. **Tách biệt rủi ro (Fault Isolation):** Nếu Kafka sập, OTel Collector sẽ chịu trận và đệm log ra ổ cứng. Chức năng của App không bị ảnh hưởng.
 3. **Kiểm soát luồng dữ liệu:** DevOps có thể cấu hình trích xuất log/metrics/traces ra nhiều hệ thống khác nhau thông qua Collector mà không cần sửa code C#.
+4. **Traceability Hoàn Hảo (Log-Trace Correlation):** Giao thức OTLP gửi cả Log, Trace và Metrics chung trên một "đường ống". OTel Collector đảm bảo 100% các dòng Log đều được gắn chặt với `TraceId` và `SpanId` chuẩn mực của W3C. Nhờ đó, trải nghiệm debug trên Kibana/Elastic APM của Dev sẽ vô cùng mượt mà (bấm từ Log nhảy sang xem Trace, và ngược lại).
 
 ---
 
