@@ -108,6 +108,7 @@ namespace ISC.Observability.Extensions
                             ["deployment.environment"] = environment
                         };
                     });
+                })
 
             // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
             // SDK tự đặt mặc định là Information
