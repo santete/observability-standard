@@ -17,7 +17,7 @@ namespace ISC.Observability.Extensions
 {
     public static class ObservabilityExtensions
     {
-        public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName)
+        public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null)
         {
             var serviceName = builder.Configuration["ServiceName"] ?? defaultServiceName;
             
@@ -64,16 +64,6 @@ namespace ISC.Observability.Extensions
                 .Enrich.WithMachineName()
                 .Enrich.WithThreadId()
                 .Enrich.With<PiiMaskingEnricher>()
-                // Tự động loại bỏ các log rác của thư viện Polly (Retry/Resilience)
-                .Filter.ByExcluding(logEvent => 
-                {
-                    if (logEvent.Properties.TryGetValue("EventId", out var eventIdValue))
-                    {
-                        var eventId = eventIdValue.ToString();
-                        return eventId.Contains("ExecutionAttempt") || eventId.Contains("ResilienceEvent");
-                    }
-                    return false;
-                })
                 // Cấu hình Console Sink: Production chỉ hiện Warning/Error để tiết kiệm I/O, môi trường khác hiện Information
                 .WriteTo.Console(
                     formatter: new Serilog.Formatting.Compact.RenderedCompactJsonFormatter(),
@@ -115,6 +105,9 @@ namespace ISC.Observability.Extensions
             {
                 logConfig.MinimumLevel.Information();
             }
+
+            // Gọi Callback để Dev có thể tự custom Filter (nếu có truyền vào)
+            configureLogger?.Invoke(logConfig);
 
             Log.Logger = logConfig.CreateLogger();
 
