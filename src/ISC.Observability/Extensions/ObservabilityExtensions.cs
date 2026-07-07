@@ -17,7 +17,7 @@ namespace ISC.Observability.Extensions
 {
     public static class ObservabilityExtensions
     {
-        public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null)
+        public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null, bool enableHealthCheckFilter = true)
         {
             var serviceName = builder.Configuration["ServiceName"] ?? defaultServiceName;
             
@@ -77,21 +77,27 @@ namespace ISC.Observability.Extensions
                     formatter: new Serilog.Formatting.Compact.RenderedCompactJsonFormatter(),
                     restrictedToMinimumLevel: consoleLevel)
                 // Cấu hình OpenTelemetry Sink qua Sub-logger để lọc log riêng biệt
-                .WriteTo.Logger(lc => lc
-                    // Loại bỏ các log liên quan đến endpoint healthcheck để giảm nhiễu trên Kibana
-                    .Filter.ByExcluding(logEvent => 
+                .WriteTo.Logger(lc => 
+                {
+                    if (enableHealthCheckFilter)
                     {
-                        if (logEvent.Properties.TryGetValue("RequestPath", out var requestPathValue))
+                        // Loại bỏ các log liên quan đến endpoint healthcheck để giảm nhiễu trên Kibana
+                        lc.Filter.ByExcluding(logEvent => 
                         {
-                            var path = requestPathValue.ToString();
-                            return path.Contains("/health", StringComparison.OrdinalIgnoreCase) || 
-                                   path.Contains("/ready", StringComparison.OrdinalIgnoreCase) || 
-                                   path.Contains("/alive", StringComparison.OrdinalIgnoreCase) ||
-                                   path.Contains("/hc", StringComparison.OrdinalIgnoreCase);
-                        }
-                        return false;
-                    })
-                    .WriteTo.OpenTelemetry(options =>
+                            if (logEvent.Properties.TryGetValue("RequestPath", out var requestPathValue))
+                            {
+                                // Xóa bỏ ngoặc kép dư thừa do đặc thù format của Serilog
+                                var path = requestPathValue.ToString().Trim('"');
+                                return path.Equals("/health", StringComparison.OrdinalIgnoreCase) || 
+                                       path.Equals("/ready", StringComparison.OrdinalIgnoreCase) || 
+                                       path.Equals("/alive", StringComparison.OrdinalIgnoreCase) ||
+                                       path.Equals("/hc", StringComparison.OrdinalIgnoreCase);
+                            }
+                            return false;
+                        });
+                    }
+                    
+                    lc.WriteTo.OpenTelemetry(options =>
                     {
                         options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
                         options.Protocol = OtlpProtocol.HttpProtobuf;
@@ -101,8 +107,7 @@ namespace ISC.Observability.Extensions
                             ["service.version"] = serviceVersion,
                             ["deployment.environment"] = environment
                         };
-                    })
-                );
+                    });
 
             // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
             // SDK tự đặt mặc định là Information
