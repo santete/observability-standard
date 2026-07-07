@@ -51,8 +51,9 @@ namespace ISC.Observability.Extensions
             // ==========================================
             // 1. SERILOG CONFIGURATION (Structured Logging)
             // ==========================================
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
+            // SDK đặt mặc định hợp lý, Dev có thể override qua appsettings.json section "Serilog"
+            var logConfig = new LoggerConfiguration()
+                .ReadFrom.Configuration(builder.Configuration)  // Cho phép Dev override từ appsettings.json
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
@@ -74,8 +75,17 @@ namespace ISC.Observability.Extensions
                         ["service.version"] = serviceVersion,
                         ["deployment.environment"] = environment
                     };
-                })
-                .CreateLogger();
+                });
+
+            // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
+            // SDK tự đặt mặc định là Information
+            if (builder.Configuration.GetSection("Serilog:MinimumLevel").Value == null
+                && builder.Configuration.GetSection("Serilog:MinimumLevel:Default").Value == null)
+            {
+                logConfig.MinimumLevel.Information();
+            }
+
+            Log.Logger = logConfig.CreateLogger();
 
             // ==========================================
             // QA COMPLIANCE TRACKING
