@@ -43,7 +43,7 @@ namespace ISC.Observability.Extensions
             // ==========================================
             // Removed Log.Information from here
 
-            var complianceMeter = new Meter("Google.Antigravity.Observability.Compliance");
+            var complianceMeter = new Meter("ISC.Observability.Compliance");
             var activeCounter = complianceMeter.CreateCounter<int>("observability.sdk.active", description: "Tracks if the standard observability SDK is attached to a service.");
             activeCounter.Add(1, new KeyValuePair<string, object?>("service.name", serviceName), new KeyValuePair<string, object?>("environment", environment));
 
