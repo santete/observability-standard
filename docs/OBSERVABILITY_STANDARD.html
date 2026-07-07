@@ -182,15 +182,19 @@ Nhà phát triển phải tuân thủ nghiêm ngặt quy tắc sử dụng Log L
     *   *Tình huống:* Lỗi xảy ra ở tầng Repository, ném lên Service, ném tiếp lên Controller.
     *   *Cách làm sai:* Tầng nào cũng bắt exception, ghi log lỗi rồi lại &#96;throw&#96; tiếp lên. (Sinh ra 3 dòng log lỗi giống hệt nhau kèm stacktrace cồng kềnh cho cùng 1 lỗi).
     *   *Cách làm đúng:* Chỉ ghi log lỗi **duy nhất một lần** tại nơi xử lý exception cuối cùng (thường là Global Exception Middleware) hoặc tại nơi lỗi được xử lý triệt để (rẽ nhánh logic).
-3.  **Tắt log mặc định của Thư viện bên thứ ba (Framework Logs):**
-    *   Mặc định, các framework như ASP.NET Core, EF Core log rất nhiều thông tin dư thừa ở mức &#96;INFO&#96; (như kết nối DB, thời gian chạy query SQL, thông tin route).
-    *   *Cấu hình bắt buộc:* Đè cấu hình tối thiểu (Override) cho các namespace framework lên mức &#96;WARNING&#96;:
+3.  **Tắt log mặc định của Thư viện bên thứ ba (Framework/Vendor Logs):**
+    *   Mặc định, các framework như ASP.NET Core, EF Core, HttpClient, Hangfire... sinh ra rất nhiều log thừa ở mức &#96;INFO&#96; (kết nối DB, câu query SQL, thông tin route) gây nhiễu Kibana.
+    *   *Cấu hình bắt buộc:* Từ **SDK v1.0.5**, thêm section &#96;Serilog&#96; vào &#96;appsettings.json&#96; để đè (Override) mức log của các vendor này lên &#96;Warning&#96; hoặc &#96;Error&#96;:
         &#96;&#96;&#96;json
-        "Logging": {
-          "LogLevel": {
+        "Serilog": {
+          "MinimumLevel": {
             "Default": "Information",
-            "Microsoft": "Warning",
-            "System": "Warning"
+            "Override": {
+              "Microsoft.EntityFrameworkCore": "Warning",
+              "System.Net.Http.HttpClient": "Warning",
+              "Hangfire": "Warning",
+              "MassTransit": "Warning"
+            }
           }
         }
         &#96;&#96;&#96;

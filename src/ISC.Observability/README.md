@@ -111,7 +111,30 @@ public class OrdersController : ControllerBase
 }
 ```
 
-### 4. Custom Tracing (Theo dõi sâu hơn bên trong phương thức)
+### 4. Tùy chỉnh Log Level & Lọc Log Rác (Từ v1.0.5)
+
+Theo mặc định, SDK thu thập toàn bộ log ở mức `Information`. Tuy nhiên, các thư viện bên thứ 3 (EF Core, HttpClient, Hangfire, v.v.) thường sinh ra rất nhiều log rác gây nhiễu hệ thống. 
+
+Từ bản **1.0.5**, bạn có thể chặn các log này bằng cách thêm cấu hình `Serilog` vào `appsettings.json`. Tính năng này dựa trên namespace (SourceContext):
+
+```json
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft.EntityFrameworkCore": "Warning",
+        "System.Net.Http.HttpClient": "Warning",
+        "Hangfire": "Warning",
+        "MassTransit": "Warning",
+        "StackExchange.Redis": "Warning"
+      }
+    }
+  }
+}
+```
+
+### 5. Custom Tracing (Theo dõi sâu hơn bên trong phương thức)
 
 Trong trường hợp bạn có một hàm xử lý rất nặng (ví dụ: chạy thuật toán tính toán phức tạp, hoặc parse file lớn) và muốn tách nó thành 1 Span riêng biệt hiển thị trên biểu đồ thác nước (Waterfall) của Kibana APM, bạn có thể tự tạo **Custom Span** bằng `System.Diagnostics.ActivitySource`:
 
