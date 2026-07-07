@@ -51,6 +51,19 @@ namespace ISC.Observability.Extensions
             // ==========================================
             // 1. SERILOG CONFIGURATION (Structured Logging)
             // ==========================================
+            
+            // Tự động detect các môi trường Production (như Prod, PRD, Production)
+            var isProduction = environment.StartsWith("Prod", StringComparison.OrdinalIgnoreCase) || 
+                               environment.Equals("PRD", StringComparison.OrdinalIgnoreCase);
+                               
+            var defaultConsoleLevel = isProduction ? LogEventLevel.Warning : LogEventLevel.Information;
+            
+            // Cho phép Dev override cứng thông qua appsettings.json
+            var consoleLevelStr = builder.Configuration["Serilog:Console:RestrictedToMinimumLevel"];
+            var consoleLevel = Enum.TryParse<LogEventLevel>(consoleLevelStr, true, out var parsedLevel) 
+                ? parsedLevel 
+                : defaultConsoleLevel;
+
             // SDK đặt mặc định hợp lý, Dev có thể override qua appsettings.json section "Serilog"
             var logConfig = new LoggerConfiguration()
                 .ReadFrom.Configuration(builder.Configuration)  // Cho phép Dev override từ appsettings.json
@@ -64,12 +77,10 @@ namespace ISC.Observability.Extensions
                 .Enrich.WithMachineName()
                 .Enrich.WithThreadId()
                 .Enrich.With<PiiMaskingEnricher>()
-                // Cấu hình Console Sink: Production chỉ hiện Warning/Error để tiết kiệm I/O, môi trường khác hiện Information
+                // Cấu hình Console Sink: Tiết kiệm I/O ở Production, cho phép override cấu hình
                 .WriteTo.Console(
                     formatter: new Serilog.Formatting.Compact.RenderedCompactJsonFormatter(),
-                    restrictedToMinimumLevel: environment.Equals("Production", StringComparison.OrdinalIgnoreCase) 
-                        ? LogEventLevel.Warning 
-                        : LogEventLevel.Information)
+                    restrictedToMinimumLevel: consoleLevel)
                 // Cấu hình OpenTelemetry Sink qua Sub-logger để lọc log riêng biệt
                 .WriteTo.Logger(lc => lc
                     // Loại bỏ các log liên quan đến endpoint healthcheck để giảm nhiễu trên Kibana

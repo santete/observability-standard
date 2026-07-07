@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>ISC.Observability</PackageId>
-    <Version>1.0.11</Version>
+    <Version>1.0.12</Version>
     <Authors>Google Antigravity Team</Authors>
     <Description>Standardized Observability SDK for .NET 8 Microservices. Provides pre-configured OpenTelemetry and Serilog integration for Logs, Traces, and Metrics.</Description>
     <RepositoryUrl>https://github.com/santete/observability-standard</RepositoryUrl>
