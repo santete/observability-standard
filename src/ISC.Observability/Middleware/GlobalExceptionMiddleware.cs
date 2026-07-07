@@ -11,7 +11,7 @@ namespace ISC.Observability.Middleware;
 /// Global exception handling middleware.
 /// Catches unhandled exceptions, logs them with full Exception object
 /// (compliant with spec section 2.3), marks the current Activity as Error,
-/// and returns RFC 7807 Problem Details response.
+/// and rethrows the exception to allow the application to handle the response.
 /// </summary>
 public class GlobalExceptionMiddleware
 {
@@ -47,26 +47,8 @@ public class GlobalExceptionMiddleware
                 activity.AddException(ex);
             }
 
-            // Return RFC 7807 Problem Details
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            context.Response.ContentType = "application/problem+json";
-
-            var problemDetails = new
-            {
-                type = "https://httpstatuses.com/500",
-                title = "Internal Server Error",
-                status = 500,
-                detail = "An unexpected error occurred. Please use the TraceId to investigate.",
-                traceId = Activity.Current?.TraceId.ToString(),
-                instance = context.Request.Path.ToString()
-            };
-
-            var json = JsonSerializer.Serialize(problemDetails, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-
-            await context.Response.WriteAsync(json);
+            // Rethrow the exception so the application can handle it normally
+            throw;
         }
     }
 }
