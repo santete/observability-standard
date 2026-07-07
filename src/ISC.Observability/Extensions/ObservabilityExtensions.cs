@@ -166,7 +166,7 @@ namespace ISC.Observability.Extensions
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()
                         .AddMeter(serviceName)
-                        .AddMeter("Google.Antigravity.Observability.Compliance") // QA Compliance Meter
+                        .AddMeter("ISC.Observability.Compliance") // QA Compliance Meter
                         .AddOtlpExporter(opt =>
                         {
                             opt.Endpoint = new Uri(otlpGrpcEndpoint);
