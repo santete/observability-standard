@@ -164,7 +164,14 @@ Nhà phát triển phải tuân thủ nghiêm ngặt quy tắc sử dụng Log L
 4.  **Hỗ trợ thay đổi Log Level động (Dynamic Log Level Changes):**
     *   Hệ thống phải hỗ trợ thay đổi log level mà không cần restart service (ví dụ: đổi từ `INFO` sang `DEBUG` trong 10 phút để bắt lỗi trên production rồi tự động chuyển lại). Có thể hiện thực qua API Endpoint bảo mật hoặc tính năng auto-reload file cấu hình.
 
-### 4.4. Tiêu chuẩn Ghi Log "ĐỦ"
+### 4.4. Tiêu chuẩn Kiến trúc xuất Log (Log Exporters & Sinks)
+Tuyệt đối tuân thủ Kiến trúc Observability Tiêu chuẩn. Ứng dụng Microservices **không được phép** tự ý kết nối và ghi log trực tiếp ra các hệ thống bên ngoài ngoài giao thức chuẩn.
+
+*   ❌ **Nghiêm cấm:** Sử dụng các Sinks như `WriteTo.Kafka()`, `WriteTo.Elasticsearch()`, `WriteTo.File()`, `WriteTo.MongoDb()` trực tiếp trong code ứng dụng. Việc này làm phình to ứng dụng (chịu tải connection pool, xử lý retry, backpressure của DB) và phá vỡ kiến trúc tập trung.
+*   ✔️ **Bắt buộc:** Ứng dụng chỉ có **1 ĐƯỜNG RA DUY NHẤT** là dùng giao thức **OTLP (OpenTelemetry)** đẩy dữ liệu về **OpenTelemetry Collector** (Đã được cấu hình tự động trong SDK `ISC.Observability`).
+*   Nếu cần chia routing (ví dụ: Log lỗi đẩy ra Topic Kafka A, Log Info đẩy ra Topic Kafka B), việc này **phải được thực hiện trên OTel Collector**, tuyệt đối không code logic chia Topic trong ứng dụng.
+
+### 4.5. Tiêu chuẩn Ghi Log "ĐỦ"
 Một dòng log được coi là đủ thông tin phục vụ điều tra phải thỏa mãn:
 
 *   **Bắt buộc có Context liên kết:** `TraceId`, `SpanId` (chuẩn OpenTelemetry) và `CorrelationId` (chuẩn liên kết request) để liên kết log với các trục dữ liệu khác.
