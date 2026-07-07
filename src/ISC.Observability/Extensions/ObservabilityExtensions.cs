@@ -64,18 +64,39 @@ namespace ISC.Observability.Extensions
                 .Enrich.WithMachineName()
                 .Enrich.WithThreadId()
                 .Enrich.With<PiiMaskingEnricher>()
-                .WriteTo.Console(new Serilog.Formatting.Compact.RenderedCompactJsonFormatter())
-                .WriteTo.OpenTelemetry(options =>
-                {
-                    options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
-                    options.Protocol = OtlpProtocol.HttpProtobuf;
-                    options.ResourceAttributes = new Dictionary<string, object>
+                // Cấu hình Console Sink: Production chỉ hiện Warning/Error để tiết kiệm I/O, môi trường khác hiện Information
+                .WriteTo.Console(
+                    formatter: new Serilog.Formatting.Compact.RenderedCompactJsonFormatter(),
+                    restrictedToMinimumLevel: environment.Equals("Production", StringComparison.OrdinalIgnoreCase) 
+                        ? LogEventLevel.Warning 
+                        : LogEventLevel.Information)
+                // Cấu hình OpenTelemetry Sink qua Sub-logger để lọc log riêng biệt
+                .WriteTo.Logger(lc => lc
+                    // Loại bỏ các log liên quan đến endpoint healthcheck để giảm nhiễu trên Kibana
+                    .Filter.ByExcluding(logEvent => 
                     {
-                        ["service.name"] = serviceName,
-                        ["service.version"] = serviceVersion,
-                        ["deployment.environment"] = environment
-                    };
-                });
+                        if (logEvent.Properties.TryGetValue("RequestPath", out var requestPathValue))
+                        {
+                            var path = requestPathValue.ToString();
+                            return path.Contains("/health", StringComparison.OrdinalIgnoreCase) || 
+                                   path.Contains("/ready", StringComparison.OrdinalIgnoreCase) || 
+                                   path.Contains("/alive", StringComparison.OrdinalIgnoreCase) ||
+                                   path.Contains("/hc", StringComparison.OrdinalIgnoreCase);
+                        }
+                        return false;
+                    })
+                    .WriteTo.OpenTelemetry(options =>
+                    {
+                        options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
+                        options.Protocol = OtlpProtocol.HttpProtobuf;
+                        options.ResourceAttributes = new Dictionary<string, object>
+                        {
+                            ["service.name"] = serviceName,
+                            ["service.version"] = serviceVersion,
+                            ["deployment.environment"] = environment
+                        };
+                    })
+                );
 
             // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
             // SDK tự đặt mặc định là Information
