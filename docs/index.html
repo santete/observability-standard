@@ -3,9 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Observability Standard - Official Rollout</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <title>Observability Standard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <!-- mermaid.js -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -17,492 +24,1273 @@
             --accent-pink: #f43f5e;
             --glass-bg: rgba(255, 255, 255, 0.03);
             --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            --glass-blur: blur(12px);
         }
 
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(192, 132, 252, 0.15) 0px, transparent 50%);
-            background-attachment: fixed;
             color: var(--text-main);
             line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
             overflow-x: hidden;
         }
 
-        /* Animations */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes pulseGlow {
-            0% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
-            50% { box-shadow: 0 0 30px rgba(56, 189, 248, 0.5); }
-            100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+        code, pre {
+            font-family: 'Fira Code', monospace;
         }
 
-        .animate-up {
-            animation: fadeInUp 0.8s ease-out forwards;
-            opacity: 0;
-        }
-
-        .delay-1 { animation-delay: 0.2s; }
-        .delay-2 { animation-delay: 0.4s; }
-        .delay-3 { animation-delay: 0.6s; }
-        .delay-4 { animation-delay: 0.8s; }
-
-        /* Typography */
-        h1, h2, h3 { font-weight: 800; letter-spacing: -0.02em; }
-        h1 { font-size: 3.5rem; background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
-        h2 { font-size: 2.5rem; margin-bottom: 1.5rem; color: #fff; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; }
-        h3 { font-size: 1.5rem; margin-bottom: 1rem; color: #f8fafc; }
-        p { margin-bottom: 1rem; color: var(--text-muted); }
-        code { font-family: 'Fira Code', monospace; background: rgba(0,0,0,0.5); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; color: var(--accent-blue); }
-        a { color: var(--accent-blue); text-decoration: none; transition: 0.3s; }
-        a:hover { color: #fff; text-shadow: 0 0 10px var(--accent-blue); }
-
-        /* Layout */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 5rem;
-            padding: 4rem 0;
-            position: relative;
-        }
-
-        /* Glassmorphism Components */
+        /* Utility classes */
         .glass-panel {
             background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2.5rem;
-            margin-bottom: 3rem;
-            box-shadow: var(--glass-shadow);
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-        }
-
-        .glass-panel:hover {
-            transform: translateY(-5px);
-            border-color: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-        }
-
-        /* Grid Layouts */
-        .pillars-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .pillar-card {
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .pillar-card .icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            display: inline-block;
-        }
-
-        .pillar-card.logging .icon { color: var(--accent-blue); text-shadow: 0 0 20px var(--accent-blue); }
-        .pillar-card.tracing .icon { color: var(--accent-purple); text-shadow: 0 0 20px var(--accent-purple); }
-        .pillar-card.metrics .icon { color: var(--accent-green); text-shadow: 0 0 20px var(--accent-green); }
-
-        .feature-list {
-            list-style: none;
-            margin-top: 1rem;
-        }
-
-        .feature-list li {
-            position: relative;
-            padding-left: 2rem;
-            margin-bottom: 0.8rem;
-            color: var(--text-main);
-        }
-
-        .feature-list li::before {
-            content: "✦";
-            position: absolute;
-            left: 0;
-            color: var(--accent-blue);
-        }
-
-        /* Mermaid container */
-        .diagram-container {
-            background: rgba(0, 0, 0, 0.3);
             border-radius: 12px;
-            padding: 2rem;
-            overflow-x: auto;
-            text-align: center;
-            border: 1px solid var(--glass-border);
+            padding: 32px;
         }
 
-        .reference-links {
-            display: flex;
-            gap: 1.5rem;
-            justify-content: center;
-            margin-top: 2rem;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 0.8rem 2rem;
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        h1, h2, h3, h4, h5, h6 {
             color: #fff;
+            margin-bottom: 1rem;
+            margin-top: 1.5rem;
             font-weight: 600;
-            backdrop-filter: blur(5px);
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .btn.primary {
-            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
-            border: none;
         }
         
-        .btn.primary:hover {
-            animation: pulseGlow 2s infinite;
+        p {
+            margin-bottom: 1rem;
         }
 
-        /* Role Badge */
-        .badge {
-            display: inline-block;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 800;
+        a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        a:hover {
+            color: #fff;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(11, 15, 25, 0.95);
+            backdrop-filter: var(--glass-blur);
+            border-right: 1px solid var(--glass-border);
+            padding: 24px 0;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 0 24px 24px;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 24px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-group {
+            margin-bottom: 20px;
+        }
+
+        .nav-title {
+            color: var(--text-muted);
+            font-size: 0.75rem;
             text-transform: uppercase;
-            margin-right: 0.5rem;
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+            padding: 0 24px;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
-        .badge.dev { background: rgba(56, 189, 248, 0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
-        .badge.devops { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
-        .badge.qa { background: rgba(244, 63, 94, 0.2); color: var(--accent-pink); border: 1px solid var(--accent-pink); }
-        .badge.sa { background: rgba(192, 132, 252, 0.2); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
 
+        .nav-links {
+            list-style: none;
+        }
+
+        .nav-links a {
+            display: block;
+            padding: 8px 24px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-left: 2px solid transparent;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .nav-links a.active {
+            color: var(--accent-blue);
+            border-left-color: var(--accent-blue);
+            background: rgba(56, 189, 248, 0.1);
+        }
+        
+        .external-link {
+            margin-top: auto;
+            padding: 24px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 48px;
+            max-width: 1000px;
+        }
+
+        .section-container {
+            margin-bottom: 64px;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        .section-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Section Specifics */
+        /* Section 1: Header */
+        .header-section {
+            text-align: center;
+            margin-bottom: 80px;
+            padding-top: 40px;
+        }
+        
+        .header-section h1 {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+        }
+
+        /* Section 2: 3 Pillars */
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+
+        .pillar-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pillar-card:nth-child(1) h3 { color: var(--accent-blue); }
+        .pillar-card:nth-child(2) h3 { color: var(--accent-purple); }
+        .pillar-card:nth-child(3) h3 { color: var(--accent-green); }
+
+        /* Section 3: SDK */
+        .sdk-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Dashboard Preview */
+        .tabs-container {
+            margin-top: 24px;
+        }
+        
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px 24px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.95rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+        
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tab-content img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        /* Markdown Styles */
+        .md-content {
+            font-size: 0.95rem;
+        }
+
+        .md-content pre {
+            background: #1e1e1e !important;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--glass-border);
+            margin: 16px 0;
+        }
+
+        .md-content code {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .md-content pre code {
+            background: transparent;
+            padding: 0;
+            color: #d4d4d4;
+        }
+
+        .md-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            background: var(--glass-bg);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .md-content th, .md-content td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            text-align: left;
+        }
+
+        .md-content th {
+            background: rgba(255,255,255,0.05);
+            font-weight: 600;
+        }
+
+        .md-content blockquote {
+            border-left: 4px solid var(--accent-blue);
+            margin: 16px 0;
+            padding: 12px 20px;
+            background: rgba(56, 189, 248, 0.05);
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .md-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 16px 0;
+            border: 1px solid var(--glass-border);
+        }
+
+        /* GitHub Alerts */
+        .alert-note { border-left-color: var(--accent-blue); background: rgba(56, 189, 248, 0.05); }
+        .alert-tip { border-left-color: var(--accent-green); background: rgba(16, 185, 129, 0.05); }
+        .alert-important { border-left-color: var(--accent-purple); background: rgba(192, 132, 252, 0.05); }
+        .alert-warning { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+        .alert-caution { border-left-color: var(--accent-pink); background: rgba(244, 63, 94, 0.05); }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Mobile */
+        .hamburger {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 200;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            padding: 10px;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 90;
+            backdrop-filter: blur(4px);
+        }
+
+        @media (max-width: 768px) {
+            .hamburger { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 80px 24px 24px; }
+            .sdk-grid { grid-template-columns: 1fr; }
+            .overlay.active { display: block; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <!-- Header Section -->
-        <header class="header animate-up">
+    <button class="hamburger" id="hamburger">☰</button>
+    <div class="overlay" id="overlay"></div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Observability Standard</h2>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">📋 Tổng Quan</div>
+            <ul class="nav-links">
+                <li><a href="#section-philosophy">Triết lý 3 Trục</a></li>
+                <li><a href="#section-sdk">SDK & Dev</a></li>
+            </ul>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">📐 Kiến Trúc</div>
+            <ul class="nav-links">
+                <li><a href="#section-architecture">Sơ đồ Kiến trúc & Trách nhiệm</a></li>
+                <li><a href="#section-dataflow">Luồng Dữ liệu & Kafka</a></li>
+            </ul>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">📖 Quy Chuẩn Chi Tiết</div>
+            <ul class="nav-links">
+                <li><a href="#section-standard">Quy Chuẩn Observability</a></li>
+            </ul>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">🔧 Vận Hành</div>
+            <ul class="nav-links">
+                <li><a href="#section-ops-layers">4 Lớp Giám Sát</a></li>
+                <li><a href="#section-dashboards">Dashboards Preview</a></li>
+            </ul>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title">🚨 Runbook & SOP</div>
+            <ul class="nav-links">
+                <li><a href="#section-runbook">Xử lý Sự cố & Vận hành</a></li>
+            </ul>
+        </div>
+
+        <div class="external-link">
+            <a href="https://www.nuget.org/packages/ISC.Observability" target="_blank" style="display: flex; align-items: center; gap: 8px;">
+                📦 SDK NuGet ↗
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        
+        <!-- SECTION 1: HEADER -->
+        <section id="section-header" class="section-container visible header-section">
             <h1>Observability Standard</h1>
-            <p style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Tài liệu Official Rollout dành cho các khối kiến trúc, phát triển, vận hành và đảm bảo chất lượng hệ thống.</p>
-            
-            <div style="margin-top: 2rem;">
-                <span class="badge sa">Solution Architect</span>
-                <span class="badge dev">Developer</span>
-                <span class="badge devops">DevOps</span>
-                <span class="badge qa">QA</span>
+            <p style="font-size: 1.2rem; color: var(--text-muted);">Tài liệu hướng dẫn thực thi & vận hành toàn diện</p>
+            <div class="badges">
+                <span class="badge" style="color: var(--accent-purple); border-color: rgba(192, 132, 252, 0.3);">System Architect</span>
+                <span class="badge" style="color: var(--accent-blue); border-color: rgba(56, 189, 248, 0.3);">Developer</span>
+                <span class="badge" style="color: var(--accent-green); border-color: rgba(16, 185, 129, 0.3);">DevOps</span>
+                <span class="badge" style="color: var(--accent-pink); border-color: rgba(244, 63, 94, 0.3);">QA</span>
             </div>
+        </section>
 
-            <div class="reference-links">
-                <a href="./ARCHITECTURE_STANDARD.html" target="_blank" class="btn primary">Kiến trúc Tiêu chuẩn</a>
-                <a href="./OBSERVABILITY_STANDARD.html" target="_blank" class="btn">Quy định Tiêu chuẩn</a>
-                <a href="./RUNBOOK_TEMPLATE.html" target="_blank" class="btn" style="border-color: var(--accent-pink); color: var(--accent-pink);">🚨 Mẫu Runbook Xử Lý Sự Cố</a>
-            </div>
-            <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--accent-green);">
-                <em>* Tài liệu tiêu chuẩn đã được nhúng sẵn định dạng hiển thị. Bác có thể xem trực tiếp 100% bằng trình duyệt mà không cần cài thêm extension! 🎉</em>
-            </p>
-        </header>
-
-        <!-- Section 1: Philosophy -->
-        <section class="animate-up delay-1">
-            <h2>1. Triết Lý Observability (3 Trục Dữ Liệu)</h2>
-            <p>Khả năng quan sát (Observability) không phải là việc ghi log tràn lan, mà là xây dựng một hệ thống có thể "tự khai báo" trạng thái của nó thông qua 3 trụ cột dữ liệu chuẩn hóa, được liên kết chặt chẽ với nhau.</p>
-            
+        <!-- SECTION 2: TRIẾT LÝ -->
+        <section id="section-philosophy" class="section-container">
+            <h2>Triết lý Observability (3 Trục Dữ Liệu)</h2>
             <div class="pillars-grid">
-                <div class="glass-panel pillar-card logging">
-                    <div class="icon">📝</div>
-                    <h3>Logging</h3>
-                    <p><strong>Ghi nhận sự kiện rời rạc.</strong> Chứa đựng các bản ghi văn bản có cấu trúc (Structured JSON) mô tả chi tiết <em>điều gì</em> đã xảy ra, vào <em>lúc nào</em>, với những tham số (context) gì.</p>
+                <div class="glass-panel pillar-card">
+                    <h3>📝 Logging</h3>
+                    <p>Nhật ký chi tiết có cấu trúc (Structured JSON). Lưu trữ các thông tin có ngữ cảnh rõ ràng về những gì đã xảy ra.</p>
                 </div>
-                <div class="glass-panel pillar-card tracing">
-                    <div class="icon">🔗</div>
-                    <h3>Tracing</h3>
-                    <p><strong>Theo dõi bối cảnh luồng.</strong> Xâu chuỗi các logs và hành động qua nhiều microservices lại thành một câu chuyện duy nhất thông qua `TraceId` và `SpanId`.</p>
+                <div class="glass-panel pillar-card">
+                    <h3>🔗 Tracing</h3>
+                    <p>Theo vết hành trình của Request qua hệ thống phân tán thông qua TraceId và SpanId.</p>
                 </div>
-                <div class="glass-panel pillar-card metrics">
-                    <div class="icon">📊</div>
-                    <h3>Metrics</h3>
-                    <p><strong>Đo lường tổng hợp.</strong> Các con số thống kê (RPS, CPU, Error Rate) để giám sát sức khỏe tổng thể và thiết lập cảnh báo tự động thay vì phải đếm từng dòng log.</p>
+                <div class="glass-panel pillar-card">
+                    <h3>📈 Metrics</h3>
+                    <p>Dữ liệu tổng hợp theo chuỗi thời gian (Aggregated Time-series) như RPS, CPU, Error Rate, Latency.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Section 2: Dev Responsibility & SDK Magic -->
-        <section class="glass-panel animate-up delay-2">
-            <h2><span class="badge dev">Developer</span> 2. Sức Mạnh Của SDK & Trách Nhiệm Của Dev</h2>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
-                <div>
-                    <h3>Nhiệm Vụ Của Dev (Siêu Nhẹ)</h3>
-                    <p>Dev <strong>KHÔNG CẦN</strong> phải tự cấu hình Serilog, Elasticsearch, OpenTelemetry hay loay hoay với việc giấu thông tin nhạy cảm. Trách nhiệm duy nhất của Dev là:</p>
-                    <ol style="margin-left: 1.5rem; margin-bottom: 1.5rem; color: var(--text-main);">
-                        <li>
-                            Cài đặt SDK từ kho NuGet Server:
-                            <div style="margin: 0.8rem 0; padding: 0.8rem 1rem; background: rgba(0,0,0,0.4); border-radius: 6px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between;">
-                                <code>dotnet add package ISC.Observability</code>
-                                <a href="https://www.nuget.org/packages/ISC.Observability" target="_blank" class="badge qa" style="margin: 0; cursor: pointer; text-decoration: none;">📦 Mở trang NuGet</a>
-                            </div>
-                        </li>
-                        <li>Gọi <code>builder.AddStandardObservability("MyService")</code> tại Program.cs.</li>
-                        <li>Gọi <code>app.UseStandardObservability()</code>.</li>
-                        <li>Ghi log các mốc nghiệp vụ (Milestones) bằng <code>_logger.LogInformation()</code>.</li>
-                    </ol>
-                    <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--accent-green); padding: 1rem; border-radius: 4px;">
-                        <strong>Cam kết:</strong> SDK đảm bảo Service của bạn tuân thủ 100% tiêu chuẩn QA Compliance.
-                    </div>
+        <!-- SECTION 3: SDK & DEV -->
+        <section id="section-sdk" class="section-container">
+            <h2>SDK & Trách Nhiệm Dev</h2>
+            <div class="sdk-grid">
+                <div class="glass-panel">
+                    <h3 style="color: var(--accent-blue)">Trách nhiệm của Dev</h3>
+                    <ul style="margin-left: 20px; margin-bottom: 16px;">
+                        <li>Cài đặt NuGet <code>ISC.Observability</code></li>
+                        <li>Gọi <code>builder.AddStandardObservability()</code></li>
+                        <li>Gọi <code>app.UseStandardObservability()</code></li>
+                        <li>Ghi log các cột mốc quan trọng có chứa Context</li>
+                    </ul>
                 </div>
-                
-                <div>
-                    <h3>SDK Tự Động Làm Gì? (Under the Hood)</h3>
-                    <ul class="feature-list">
-                        <li><strong>Global Exception Handling:</strong> Bắt toàn bộ lỗi (Crashes) chưa được xử lý, chụp StackTrace, URL, HTTP Method và tự động báo cáo lên mức ERROR.</li>
-                        <li><strong>HTTP Request Logging:</strong> Tự động ghi nhận mọi request đến và đi, thống kê thời gian phản hồi (Latency), mã trạng thái (200, 400, 500).</li>
-                        <li><strong>Auto-Correlation:</strong> Tự sinh <code>TraceId</code>, gài vào Response Header và truyền qua các service khác để xâu chuỗi luồng.</li>
-                        <li><strong>PII Masking:</strong> Tự động làm mờ các dữ liệu nhạy cảm (Email, Phone, SSN, Credit Card) trong log body bằng <code>***</code>.</li>
-                        <li><strong>Runtime Metrics:</strong> Thu thập tài nguyên hệ thống như GC Heap, ThreadPool starvation, CPU/RAM usage.</li>
+                <div class="glass-panel">
+                    <h3 style="color: var(--accent-green)">SDK Auto Features</h3>
+                    <ul style="margin-left: 20px; margin-bottom: 16px;">
+                        <li>Global Exception Handling</li>
+                        <li>HTTP Request Logging tự động</li>
+                        <li>Auto-Correlation (Trace/Span Injection)</li>
+                        <li>PII Masking (Che mờ dữ liệu nhạy cảm)</li>
+                        <li>Runtime Metrics (.NET/GC/Memory)</li>
                     </ul>
                 </div>
             </div>
-        </section>
-
-        <!-- Section 2.5: Distributed Tracing -->
-        <section class="glass-panel animate-up delay-2" style="margin-top: 2rem;">
-            <h2><span class="badge dev">Developer</span> Trực Quan Hóa Distributed Tracing (Multi-Instrument)</h2>
-            <p>Nhờ sức mạnh của Auto-Instrumentation, toàn bộ luồng request chạy qua HTTP, Message Broker (Kafka), Cache (Redis), và Database (MongoDB/SQL) đều được tự động xâu chuỗi liền mạch trên cùng một biểu đồ thác nước (Waterfall). Dev có thể theo dõi chính xác thời gian thực thi của từng lớp hệ thống mà không cần viết code truyền TraceId thủ công.</p>
-            <div style="margin-top: 1.5rem; text-align: center;">
-                <img src="screenshots/tracing-multi-instrument.jpg" alt="Distributed Tracing Waterfall" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+            <div class="glass-panel">
+                <h4>Distributed Tracing Visualization</h4>
+                <img src="screenshots/tracing-multi-instrument.jpg" alt="Tracing Screenshot" style="max-width: 100%; border-radius: 8px; margin-top: 16px; border: 1px solid var(--glass-border);">
             </div>
         </section>
 
-        <!-- Section 3: Data Flow Architecture -->
-        <section class="glass-panel animate-up delay-3">
-            <h2><span class="badge devops">DevOps</span> <span class="badge sa">SA</span> 3. Luồng Dữ Liệu & Tích Hợp Kafka</h2>
-            <p>Ứng dụng không trực tiếp kết nối với các hệ thống lưu trữ (Elasticsearch/Kafka) để tối ưu hiệu năng. Toàn bộ quá trình xuất dữ liệu đều thông qua giao thức chuẩn OTLP đẩy về bộ thu thập (Collector) do DevOps quản trị.</p>
-            
-            <div class="diagram-container" style="margin-top: 2rem;">
+        <!-- SECTION 4: KIẾN TRÚC -->
+        <section id="section-architecture" class="section-container">
+            <div class="glass-panel md-content" id="md-render-arch"></div>
+        </section>
+
+        <!-- SECTION 5: LUỒNG DỮ LIỆU & KAFKA -->
+        <section id="section-dataflow" class="section-container">
+            <h2>Luồng Dữ liệu & Kafka</h2>
+            <div class="glass-panel">
                 <div class="mermaid">
-                    graph LR
-                        subgraph "Tầng Ứng Dụng (Dev)"
-                            APP["Microservice<br>(.NET 8 + SDK)"]
-                        end
-
-                        subgraph "Tầng Hạ Tầng Thu Thập (DevOps)"
-                            OTEL{"OpenTelemetry<br>Collector"}
-                        end
-
-                        subgraph "Tầng Lưu Trữ & Hiển Thị"
-                            ES[("Elasticsearch<br>(Data Store)")]
-                            KAFKA[("Kafka Topics<br>(Log Sync)")]
-                            KIBANA[["Kibana<br>(Dashboards)"]]
-                        end
-
-                        APP == "gRPC/HTTP (OTLP)<br>Logs/Traces/Metrics" ==> OTEL
-                        
-                        OTEL -- "Pipeline 1: Lưu Trữ" --> ES
-                        OTEL -. "Pipeline 2: Bắn Kafka (Optional)" .-> KAFKA
-                        
-                        ES <--- KIBANA
-                        
-                        classDef app fill:#0e7490,stroke:#22d3ee,stroke-width:2px,color:#fff;
-                        classDef otel fill:#6b21a8,stroke:#d8b4fe,stroke-width:2px,color:#fff;
-                        classDef store fill:#b45309,stroke:#fcd34d,stroke-width:2px,color:#fff;
-                        classDef dash fill:#1d4ed8,stroke:#93c5fd,stroke-width:2px,color:#fff;
-                        
-                        class APP app;
-                        class OTEL otel;
-                        class ES,KAFKA store;
-                        class KIBANA dash;
-                </div>
-            </div>
-            
-            <div style="margin-top: 2rem;">
-                <blockquote class="markdown-alert markdown-alert-caution" style="border-left: 4px solid #f43f5e; background: rgba(244, 63, 94, 0.1); padding: 1.5rem; border-radius: 8px;">
-                    <strong style="color: #f43f5e; font-size: 1.2rem;">⚠️ ANTI-PATTERN: NGHIÊM CẤM DEV PUSH LOG TRỰC TIẾP VÀO KAFKA</strong><br>
-                    <p style="margin-top: 0.5rem;">Trong hệ thống cũ, Dev có thói quen tự cài thư viện Kafka Producer vào App và bắn thẳng log sự kiện vào Topic. Điều này gây ra <strong>hậu quả nghiêm trọng:</strong></p>
-                    <ul style="margin-left: 1.5rem; margin-top: 0.5rem; color: var(--text-main);">
-                        <li>Log bị phân mảnh: Nửa nằm ở Kafka, nửa nằm ở hệ thống khác, mất hoàn toàn <code>TraceId</code> xâu chuỗi.</li>
-                        <li>Trôi lọt dữ liệu nhạy cảm (PII) do không đi qua bộ lọc tập trung.</li>
-                        <li>App bị phình to (Bloated) và tốn resource để duy trì kết nối Kafka.</li>
-                    </ul>
-                </blockquote>
-                
-                <p style="margin-top: 1.5rem;"><strong>GIẢI PHÁP CHUẨN HÓA (Single Source of Truth):</strong></p>
-                <p>Từ nay, <strong>Dev chỉ có 1 đường ghi log duy nhất:</strong> Ghi log qua `ILogger` và để SDK tự động bắn OTLP lên Collector. <strong>Dev hoàn toàn không cần đụng đến Kafka!</strong></p>
-                <p>Nếu hệ thống (Data Lake, Billing...) cần tiêu thụ log từ Kafka, <strong>DevOps</strong> sẽ cấu hình <code>otel-collector-config.yml</code> tạo ra một Pipeline xuất log từ Collector sang Kafka bằng bộ <code>kafkaexporter</code>. Bằng cách này, log trên Kafka được đảm bảo 100% nhất quán, có chứa <code>TraceId</code> và đã được PII Masking sạch sẽ.</p>
-            </div>
-        </section>
-
-        <!-- Section 4: Kibana & Dashboards & Operational Standard -->
-        <section class="glass-panel animate-up delay-4">
-            <h2><span class="badge qa">QA</span> <span class="badge sa">SA</span> 4. Tiêu Chuẩn Vận Hành Giám Sát (Operational Standard)</h2>
-            <p>Mục đích cuối cùng của Observability không phải là vẽ ra các biểu đồ cho đẹp, mà là thiết lập một <strong>Quy trình Vận hành Khắc phục Sự cố (Incident Response)</strong> chuẩn mực. Khi sự cố xảy ra, các team sẽ phối hợp thông qua 4 lớp phòng ngự (Dashboards) sau:</p>
-            
-            <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
-                
-                <div style="background: rgba(56, 189, 248, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-blue); position: relative;">
-                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">🚨</div>
-                    <h3 style="color: var(--accent-blue);">LỚP 1: Cảnh Báo Sớm & Tổng Quan (Executive Overview)</h3>
-                    <p><strong>Người dùng:</strong> System Admin, Tech Lead, Product Manager.</p>
-                    <p><strong>Hành động:</strong> Giám sát 24/7. Nhìn vào các chỉ số sinh tồn (KPIs) như <strong>RPS (Lưu lượng)</strong>, <strong>Lỗi 5xx</strong>, và <strong>Độ trễ p99</strong>. Nếu thấy Error Rate tăng vọt hoặc Latency dâng cao thành vệt đỏ trên timeline -> Kích hoạt quy trình báo động toàn team.</p>
+                flowchart LR
+                    App[Ứng dụng / Microservice] -->|OTLP| OTel[OpenTelemetry Collector]
+                    OTel -->|Batch/Filter| Kafka[Kafka Topics]
+                    OTel -->|Direct| ES[Elasticsearch]
+                    Kafka --> Consumers[Log/Metric Consumers]
+                    ES --> Kibana[Kibana Dashboards]
                 </div>
                 
-                <div style="background: rgba(192, 132, 252, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-purple); position: relative;">
-                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">🐛</div>
-                    <h3 style="color: var(--accent-purple);">LỚP 2: Bắt Bệnh & Truy Vết (Developer Deep-Dive)</h3>
-                    <p><strong>Người dùng:</strong> Developers.</p>
-                    <p><strong>Hành động:</strong> Nhận được báo động từ Lớp 1, Dev lập tức mở Dashboard này. Tìm ra ngay lập tức <em>Top 10 API nào đang chậm nhất</em> hoặc <em>API nào đang quăng lỗi</em>. Click vào API đó để lấy <code>TraceId</code>, vứt vào khung search để xâu chuỗi toàn bộ luồng chạy của Request, tìm ra chính xác Class/Function hoặc câu Query DB nào gây lỗi. Không cần đoán mò!</p>
-                </div>
-                
-                <div style="background: rgba(16, 185, 129, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-green); position: relative;">
-                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">⚙️</div>
-                    <h3 style="color: var(--accent-green);">LỚP 3: Phân Tích Hạ Tầng Ngầm (Infrastructure & Runtime)</h3>
-                    <p><strong>Người dùng:</strong> DevOps, SRE, Tech Lead.</p>
-                    <p><strong>Hành động:</strong> Nếu Lớp 2 không tìm thấy lỗi do logic code, nguyên nhân có thể do hạ tầng. DevOps dùng Dashboard này để soi xem hệ thống có bị "nghẽn cổ chai" (Bottleneck) hay không: <em>RAM có bị rò rỉ (Memory Leak)? GC (Garbage Collector) có đang bị đơ (Pause)? ThreadPool có bị quá tải không?</em> Từ đó quyết định Scale Up server hay khởi động lại.</p>
-                </div>
-                
-                <div style="background: rgba(244, 63, 94, 0.05); padding: 2rem; border-radius: 12px; border-left: 4px solid var(--accent-pink); position: relative;">
-                    <div style="position: absolute; top: 1rem; right: 1rem; font-size: 3rem; opacity: 0.2;">🛡️</div>
-                    <h3 style="color: var(--accent-pink);">LỚP 4: Cổng Kiểm Duyệt Chất Lượng (QA Compliance Tracker)</h3>
-                    <p><strong>Người dùng:</strong> QA, PM.</p>
-                    <p><strong>Hành động:</strong> QA Compliance Tracker được dùng để giám sát mức độ tuân thủ liên tục. Dữ liệu từ Dashboard này (như việc Service đã bắn tín hiệu <code>[Compliance=True]</code> hay chưa) sẽ được dùng làm bằng chứng (evidence). Cổng kiểm soát chính thức đưa ra quyết định chặn/cho phép Release là <strong>Quality Gate 2 (Pre-Operation)</strong>.</p>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- Section 5: Live Dashboard Screenshots -->
-        <section class="glass-panel animate-up" style="animation-delay: 0.5s;">
-            <h2>📸 5. Dashboards Thực Tế (Live Preview)</h2>
-            <p>Đây là giao diện thực tế của 4 Dashboards đã được triển khai lên Kibana. Mỗi Dashboard phục vụ một đối tượng và mục tiêu riêng biệt trong quy trình vận hành.</p>
-
-            <!-- Tab nav -->
-            <div style="display: flex; gap: 0.5rem; margin-top: 2rem; flex-wrap: wrap;">
-                <button class="db-tab active" data-tab="db1" style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">🚨 Executive Overview</button>
-                <button class="db-tab" data-tab="db2" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">🐛 Developer Deep-Dive</button>
-                <button class="db-tab" data-tab="db3" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">⚙️ Infrastructure & Runtime</button>
-                <button class="db-tab" data-tab="db4" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">🛡️ QA Compliance</button>
-            </div>
-
-            <!-- Tab panels -->
-            <div id="db1" class="db-panel" style="margin-top: 1.5rem;">
-                <div style="background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.2); border-radius: 12px; padding: 1.5rem;">
-                    <h3 style="color: var(--accent-blue); margin-bottom: 0.5rem;">LỚP 1 – Executive Overview: System Health</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">KPIs sinh tồn: Tổng request, Error Count, Max/Avg Latency · Request Rate theo thời gian · HTTP Status Distribution</p>
-                    <a href="http://localhost:5601/app/dashboards#/view/executive-overview-dashboard" target="_blank">
-                        <img src="screenshots/executive_overview.png" alt="Executive Overview Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                    </a>
-                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
-                </div>
-            </div>
-
-            <div id="db2" class="db-panel" style="margin-top: 1.5rem; display: none;">
-                <div style="background: rgba(192,132,252,0.05); border: 1px solid rgba(192,132,252,0.2); border-radius: 12px; padding: 1.5rem;">
-                    <h3 style="color: var(--accent-purple); margin-bottom: 0.5rem;">LỚP 2 – Developer Deep-Dive: Debug & Optimize</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Top 10 API chậm nhất (p95) · Top 10 API nhiều lỗi nhất · Error timeline · Log stream với TraceId để gỡ lỗi</p>
-                    <a href="http://localhost:5601/app/dashboards#/view/developer-deepdive-dashboard" target="_blank">
-                        <img src="screenshots/developer_deepdive.png" alt="Developer Deep-Dive Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                    </a>
-                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
-                </div>
-            </div>
-
-            <div id="db3" class="db-panel" style="margin-top: 1.5rem; display: none;">
-                <div style="background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 1.5rem;">
-                    <h3 style="color: var(--accent-green); margin-bottom: 0.5rem;">LỚP 3 – Infrastructure & Runtime Health</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Memory usage · GC Pause Time · ThreadPool queue · CPU và tài nguyên hệ thống runtime</p>
-                    <a href="http://localhost:5601/app/dashboards#/view/infrastructure-runtime-dashboard" target="_blank">
-                        <img src="screenshots/infrastructure_runtime.png" alt="Infrastructure & Runtime Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                    </a>
-                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
-                </div>
-            </div>
-
-            <div id="db4" class="db-panel" style="margin-top: 1.5rem; display: none;">
-                <div style="background: rgba(244,63,94,0.05); border: 1px solid rgba(244,63,94,0.2); border-radius: 12px; padding: 1.5rem;">
-                    <h3 style="color: var(--accent-pink); margin-bottom: 0.5rem;">LỚP 4 – QA Compliance Tracker</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">QA Compliance Tracker được dùng để giám sát mức độ tuân thủ; cổng kiểm soát chính thức là Quality Gate 2 (Pre-Operation)</p>
-                    <a href="http://localhost:5601/app/dashboards#/view/qa-compliance-dashboard" target="_blank">
-                        <img src="screenshots/qa_compliance.png" alt="QA Compliance Dashboard" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.3s; cursor: pointer;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                    </a>
-                    <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">👆 Click để mở Dashboard trong Kibana</p>
+                <div class="md-content">
+                    <blockquote class="alert-warning" style="margin-top: 24px;">
+                        <div class="alert-title">⚠️ Anti-Pattern Warning</div>
+                        Không đẩy log hoặc trace trực tiếp từ Ứng dụng vào Kafka hoặc Elasticsearch. Phải đi qua OTel Collector (Single OTLP Path) để xử lý backpressure, retry và batching tập trung.
+                    </blockquote>
                 </div>
             </div>
         </section>
 
-        <footer style="text-align: center; margin-top: 4rem; color: var(--text-muted); border-top: 1px solid var(--glass-border); padding-top: 2rem;">
-            <p>© 2026. Built for the Modern Microservices Architecture.</p>
-        </footer>
+        <!-- SECTION 6: QUY CHUẨN (From File) -->
+        <section id="section-standard" class="section-container">
+            <div class="glass-panel md-content" id="md-render-standard"></div>
+        </section>
 
-    </div>
+        <!-- SECTION 7: TIÊU CHUẨN VẬN HÀNH 4 LAYERS -->
+        <section id="section-ops-layers" class="section-container">
+            <h2>Tiêu Chuẩn Vận Hành (4 Layers)</h2>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="glass-panel" style="border-left: 4px solid var(--accent-blue);">
+                    <h3 style="margin-top: 0;">Layer 1: Executive Overview</h3>
+                    <p style="margin-bottom: 0; color: var(--text-muted);">24/7 Monitoring, Golden Signals (RPS, Errors, Latency). Cảnh báo tổng quan.</p>
+                </div>
+                <div class="glass-panel" style="border-left: 4px solid var(--accent-purple);">
+                    <h3 style="margin-top: 0;">Layer 2: Developer Deep-Dive</h3>
+                    <p style="margin-bottom: 0; color: var(--text-muted);">TraceId Debugging, APM, theo dõi chi tiết lỗi từng Endpoint.</p>
+                </div>
+                <div class="glass-panel" style="border-left: 4px solid var(--accent-green);">
+                    <h3 style="margin-top: 0;">Layer 3: Infrastructure & Runtime</h3>
+                    <p style="margin-bottom: 0; color: var(--text-muted);">Memory, GC, ThreadPool, Resource Saturation.</p>
+                </div>
+                <div class="glass-panel" style="border-left: 4px solid var(--accent-pink);">
+                    <h3 style="margin-top: 0;">Layer 4: QA Compliance Tracker</h3>
+                    <p style="margin-bottom: 0; color: var(--text-muted);">Quality Gate 2, đo lường sự tuân thủ chuẩn Observability.</p>
+                </div>
+            </div>
+        </section>
 
-    <script>
-        mermaid.initialize({ 
-            startOnLoad: true, 
-            theme: 'dark',
-            securityLevel: 'loose',
-            fontFamily: 'Inter',
-            flowchart: {
-                curve: 'basis'
+        <!-- SECTION 8: DASHBOARDS PREVIEW -->
+        <section id="section-dashboards" class="section-container">
+            <h2>Dashboards Live Preview</h2>
+            <div class="glass-panel tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-target="tab1">Executive Overview</button>
+                    <button class="tab-btn" data-target="tab2">Developer Deep-Dive</button>
+                    <button class="tab-btn" data-target="tab3">Infra & Runtime</button>
+                    <button class="tab-btn" data-target="tab4">QA Compliance</button>
+                </div>
+                
+                <div class="tab-content active" id="tab1">
+                    <img src="screenshots/executive_overview.png" alt="Executive Overview Dashboard">
+                </div>
+                <div class="tab-content" id="tab2">
+                    <img src="screenshots/developer_deepdive.png" alt="Developer Deep-Dive Dashboard">
+                </div>
+                <div class="tab-content" id="tab3">
+                    <img src="screenshots/infrastructure_runtime.png" alt="Infrastructure Runtime Dashboard">
+                </div>
+                <div class="tab-content" id="tab4">
+                    <img src="screenshots/qa_compliance.png" alt="QA Compliance Dashboard">
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 9: RUNBOOK & SOP (From File) -->
+        <section id="section-runbook" class="section-container">
+            <div class="glass-panel md-content" id="md-render-runbook"></div>
+        </section>
+
+        <!-- SECTION 10: FOOTER -->
+        <section class="section-container visible" style="text-align: center; padding: 40px 0; border-top: 1px solid var(--glass-border); color: var(--text-muted);">
+            <p>&copy; 2026 Observability Standard. All rights reserved.</p>
+        </section>
+
+    </main>
+
+    <!-- Raw Markdown Data -->
+    <script type="text/markdown" id="raw-md-arch">
+# Kiến Trúc Observability: Phân Tách Giữa Dev và DevOps
+
+Mô hình kiến trúc High-Level phân định ranh giới trách nhiệm giữa Dev và DevOps.
+
+## 1. Sơ đồ Kiến trúc
+
+```mermaid
+flowchart TD
+    subgraph DevDomain [Developer Domain]
+        App[.NET Microservice]
+        SDK[OpenTelemetry SDK]
+        App --> SDK
+    end
+
+    subgraph Interface [OTLP Interface]
+        OTLP[gRPC 4317 / HTTP 4318]
+    end
+
+    subgraph DevOpsDomain [DevOps/SRE Domain]
+        Collector[OTel Collector]
+        Elastic[Elasticsearch]
+        Kibana[Kibana]
+        Kafka[Kafka]
+        
+        Collector --> Elastic
+        Collector --> Kafka
+        Elastic --> Kibana
+    end
+
+    SDK -->|Push| OTLP
+    OTLP -->|Receive| Collector
+```
+
+## 2. Phân Chia Trách Nhiệm
+
+### 🛠️ Developer (Dev)
+* Phạm vi: Code ứng dụng
+* Implement OpenTelemetry SDK & Serilog
+* Khai báo OTLP endpoint
+* Không cần quan tâm: Storage, Index, Kibana config
+
+### ⚙️ DevOps / SRE
+* Phạm vi: Data Pipeline & Backend Storage
+* Triển khai OTel Collector
+* Cấu hình batching, memory limiting, filtering
+* Không cần quan tâm: .NET code, Serilog version
+
+## 3. Tại sao chọn OTLP?
+Zero Vendor Lock-in - Dev đổi ngôn ngữ không ảnh hưởng DevOps, DevOps đổi backend không cần Dev sửa code.
+
+## 4. Công Cụ Đề Xuất
+- .NET 8, Serilog, OpenTelemetry .NET SDK
+- OTLP (gRPC 4317, HTTP 4318)
+- OpenTelemetry Collector (contrib)
+- Elasticsearch 8.x, Kibana 8.x
+    </script>
+
+    <script type="text/markdown" id="raw-md-standard">
+# 🔭 TIÊU CHUẨN QUAN SÁT HỆ THỐNG (OBSERVABILITY STANDARD)
+### *Tài liệu hướng dẫn thực thi & vận hành dành cho Developer & System Architect (SA)*
+
+---
+
+## 📌 MỤC LỤC
+1. [Giới thiệu & Triết lý Observability](#1-giới-thiệu--triết-lý-observability)
+2. [Định nghĩa & So sánh 3 Trục Dữ liệu (Pillars of Observability)](#2-định-nghĩa--so-sánh-3-trục-dữ-liệu-pillars-of-observability)
+3. [Quy chuẩn Đặt tên & Phân loại Dịch vụ (Resource Taxonomy)](#3-quy-chuẩn-đặt-tên--phân-loại-dịch-vụ-resource-taxonomy)
+4. [Tiêu chuẩn Logging (Nhật ký Sự kiện) - Đúng, Đủ và Không Rác](#4-tiêu-chuẩn-logging-nhật-ký-sự-kiện---đúng-đủ-và-không-rác)
+5. [Tiêu chuẩn Tracing (Dấu vết Phân tán) - Bám sát luồng Request](#5-tiêu-chuẩn-tracing-dấu-vết-phân-tán---bám-sát-luồng-request)
+6. [Tiêu chuẩn Metrics (Số liệu Đo lường) - Xu hướng & Trạng thái](#6-tiêu-chuẩn-metrics-số-liệu-đo-lường---xu-hướng--trạng-thái)
+7. [Yêu cầu Thiết kế Dashboard & Các câu hỏi Vận hành cần giải quyết](#7-yêu-cầu-thiết-kế-dashboard--các-câu-hỏi-vận-hành-cần-giải-quyết)
+
+---
+
+## 1. Giới thiệu & Triết lý Observability
+
+Trong các hệ thống phân tán và microservices hiện đại, giám sát theo kiểu truyền thống (Monitoring) chỉ trả lời câu hỏi: **"Hệ thống có đang hoạt động hay không?"** (thông qua ping, healthcheck). 
+
+**Observability (Khả năng quan sát)** tiến xa hơn bằng cách trả lời câu hỏi: **"Tại sao hệ thống lại hoạt động như vậy?"**. Nó cho phép Developer và SA suy luận ra trạng thái bên trong của một hệ thống phức tạp dựa trên các đầu ra bên ngoài của nó mà không cần deploy code debug mới.
+
+### Vai trò của tài liệu:
+* **Đối với SA (System Architect):** Định hình kiến trúc dữ liệu giám sát, thiết kế hệ thống cảnh báo (alerting), hoạch định tài nguyên hệ thống và xây dựng quy chuẩn vận hành chung.
+* **Đối với Dev (Developer):** Cung cấp tiêu chuẩn viết code, ghi log đúng định dạng, cấu hình đo lường hiệu năng và tích hợp trace context xuyên suốt các dịch vụ.
+
+---
+
+## 2. Định nghĩa & So sánh 3 Trục Dữ liệu (Pillars of Observability)
+
+Một hệ thống có khả năng quan sát toàn diện phải được xây dựng dựa trên sự kết hợp hài hòa của **3 trục dữ liệu (Logs, Traces, Metrics)**. Mỗi trục giải quyết một góc nhìn khác nhau.
+
+```mermaid
+graph TD
+    A[Observability] --> B[Logs: Chi tiết Sự kiện]
+    A --> C[Traces: Hành trình Request]
+    A --> D[Metrics: Chỉ số & Xu hướng]
+    
+    B --> B1[Câu hỏi: Chuyện gì xảy ra tại điểm X?]
+    C --> C1[Câu hỏi: Request nghẽn ở đâu?]
+    D --> D1[Câu hỏi: Tần suất, Tỉ lệ lỗi thế nào?]
+```
+
+### Bảng so sánh 3 trục dữ liệu:
+
+| Đặc tính | Logging (Logs) | Tracing (Traces) | Metrics (Metrics) |
+| :--- | :--- | :--- | :--- |
+| **Định nghĩa** | Bản ghi chi tiết của các sự kiện đơn lẻ kèm ngữ cảnh cụ thể. | Hành trình đi qua các component của một request cụ thể. | Dữ liệu dạng số được tổng hợp theo thời gian (Aggregated). |
+| **Độ chi tiết** | Rất cao (Có thông tin biến, stack trace, chi tiết lỗi). | Trung bình đến Cao (Timeline, Dependency call, Latency). | Thấp (Chỉ gồm số lượng, tỉ lệ, xu hướng, phân vị). |
+| **Chi phí lưu trữ** | Rất đắt (Dữ liệu dạng text dung lượng lớn, tăng tuyến tính). | Đắt (Cần kỹ thuật lấy mẫu - Sampling để tối ưu chi phí). | Rất rẻ (Dữ liệu số cực nhỏ gọn, thời gian lưu trữ lâu dài). |
+| **Khả năng cảnh báo**| Kém (Chỉ nên cảnh báo khi xuất hiện lỗi nghiêm trọng cụ thể). | Trung bình (Cảnh báo dựa trên thời gian thực thi của span). | Rất tốt (Dễ cấu hình ngưỡng cảnh báo: CPU > 80%, Error > 1%). |
+| **Mục đích chính** | Điều tra nguyên nhân sâu xa (Root Cause Analysis). | Phát hiện nút thắt cổ chai (Bottleneck) & lỗi luồng truyền dẫn. | Giám sát trạng thái sức khỏe tổng quan & dự báo tài nguyên. |
+
+---
+
+## 3. Quy chuẩn Đặt tên & Phân loại Dịch vụ (Resource Taxonomy)
+
+Khi hệ thống mở rộng lên hàng trăm microservices thuộc nhiều dự án (Projects/Domains) khác nhau và cùng đẩy dữ liệu về một cụm OpenTelemetry Collector trung tâm, việc chuẩn hóa cách đặt tên (Naming Convention) là cực kỳ quan trọng. 
+
+Nếu không có bộ tiêu chuẩn này, đội vận hành sẽ nhìn vào một "bể" log/trace hỗn độn, không biết service này thuộc dự án nào, team nào chịu trách nhiệm, và đang chạy ở môi trường (Environment) nào.
+
+Dưới đây là bộ thuộc tính chuẩn (Resource Attributes) dựa trên **OpenTelemetry Semantic Conventions** bắt buộc phải được khai báo lúc khởi tạo SDK:
+
+### 3.1. Các thuộc tính định danh lõi (Core Identity Attributes)
+
+*   **`service.namespace` (Tên Dự án / Domain):**
+    *   *Ý nghĩa:* Gom nhóm các microservices có liên quan nghiệp vụ vào một cụm lớn (ví dụ: một Gitlab Group hoặc một Domain).
+    *   *Convention:* `kebab-case`, tiếng Anh, không chứa ký tự đặc biệt.
+    *   *Ví dụ:* `ecommerce-core`, `payment-gateway`, `crm-system`.
+*   **`service.name` (Tên Dịch vụ):**
+    *   *Ý nghĩa:* Tên duy nhất của microservice hoặc ứng dụng. Tên này phải match 100% với tên Git Repository để dễ dàng tra cứu code.
+    *   *Convention:* `kebab-case`. Không bao gồm hậu tố môi trường (dev/prod) vào tên service.
+    *   *Ví dụ:* `order-processor`, `user-auth-api`, `inventory-worker`.
+*   **`deployment.environment` (Môi trường triển khai):**
+    *   *Ý nghĩa:* Phân tách dữ liệu giữa các môi trường để Dashboard có thể lọc ra (Filter) nhanh chóng, tránh nhầm lẫn log Dev với log Prod.
+    *   *Convention:* Viết thường (lowercase). Chỉ sử dụng các giá trị chuẩn mực.
+    *   *Ví dụ:* `prod`, `staging`, `uat`, `dev`.
+*   **`service.version` (Phiên bản):**
+    *   *Ý nghĩa:* Giúp QA/DevOps theo dõi sự biến động lỗi sau mỗi lần release.
+    *   *Convention:* Sử dụng Semantic Versioning (SemVer) hoặc Git Commit Hash (Short SHA).
+    *   *Ví dụ:* `1.2.0`, `v2.0.1-beta`, `a8c4f92`.
+
+### 3.2. Cấu trúc hiển thị trên Kibana/APM (Service Map)
+
+Khi tuân thủ nghiêm ngặt 4 thuộc tính trên, hệ thống APM (như Kibana, Jaeger, Datadog) sẽ tự động xây dựng được bản đồ kiến trúc (Service Map) cực kỳ rõ ràng:
+
+1.  **Level 1 (Filtering):** Môi trường `deployment.environment = prod`
+2.  **Level 2 (Grouping):** Nhóm dự án `service.namespace = ecommerce-core`
+3.  **Level 3 (Nodes):** Các dịch vụ liên kết với nhau `service.name = order-processor` gọi sang `inventory-worker`.
+
+**Lợi ích đối với vận hành:**
+*   **Developer:** Bị lỗi ở `order-processor` -> Lên Kibana search `service.name: "order-processor" AND deployment.environment: "prod"` -> Lấy mã lỗi đối chiếu vào Git Repo `order-processor` để fix.
+*   **DevOps/SA:** Nhìn vào Service Map, phát hiện ngay nhóm `ecommerce-core` đang gọi chéo (cross-domain) quá nhiều sang nhóm `crm-system`, gây nguy cơ thắt cổ chai kiến trúc (Architectural Bottleneck), từ đó có kế hoạch refactor.
+
+---
+
+## 4. Tiêu chuẩn Logging (Nhật ký Sự kiện) - Đúng, Đủ và Không Rác
+
+Logging là trục dữ liệu dễ bị lạm dụng nhất, dẫn đến hai trạng thái cực đoan: **"Mù thông tin"** (khi có sự cố không tìm được log) hoặc **"Ngập lụt log rác"** (tốn chi phí lưu trữ, làm chậm hệ thống và loãng thông tin điều tra).
+
+### 4.1. Ghi Log có cấu trúc (Structured Logging) - Bắt buộc
+Tuyệt đối **không** ghi log dưới dạng chuỗi văn bản thuần túy (Plain Text) ghép chuỗi. Định dạng xuất bản log bắt buộc phải là **JSON** để hệ thống tập trung dữ liệu (Elasticsearch, Loki) có thể phân tích cú pháp thành các trường dữ liệu tìm kiếm được.
+
+*   ❌ **SAI (Ghép chuỗi hoặc nội suy string):**
+    ```csharp
+    // Elasticsearch chỉ hiểu đây là một chuỗi ngẫu nhiên, không thể tìm kiếm theo UserId hoặc OrderId
+    _logger.LogInformation($"User {userId} processed order {orderId} in {elapsed}ms.");
+    ```
+*   ✔️ **ĐÚNG (Sử dụng Message Template):**
+    ```csharp
+    // Serilog sẽ bóc tách các biến thành các thuộc tính JSON: properties.UserId, properties.OrderId, properties.ElapsedMs
+    _logger.LogInformation("User {UserId} processed order {OrderId} in {ElapsedMs}ms", userId, orderId, elapsed);
+    ```
+
+### 4.2. Tiêu chuẩn phân định Log Levels
+Nhà phát triển phải tuân thủ nghiêm ngặt quy tắc sử dụng Log Level để tránh làm nhiễu hệ thống cảnh báo:
+
+*   **FATAL (CRITICAL):**
+    *   *Định nghĩa:* Lỗi hệ thống nghiêm trọng làm chết tiến trình (Crash) hoặc hư hỏng luồng nghiệp vụ cốt lõi không thể tự phục hồi (Hỏng kết nối DB chính, đứt kết nối Message Queue chính, cấu hình sai lúc start-up).
+    *   *Hành động:* Kích hoạt SMS/Pager/Slack cảnh báo lập tức cho đội trực vận hành (On-call).
+*   **ERROR:**
+    *   *Định nghĩa:* Lỗi xảy ra trong phạm vi một Request hoặc một Task cụ thể, nhưng ứng dụng vẫn tiếp tục chạy được để phục vụ các Request khác (Lỗi nghiệp vụ ném ra Exception, lỗi gọi API bên thứ ba thất bại sau khi đã retry).
+    *   *Hành động:* Ghi lại kèm Stack Trace. Đẩy lên Dashboard lỗi để Dev xử lý.
+*   **WARNING (WARN):**
+    *   *Định nghĩa:* Các tình huống bất thường hoặc tiềm ẩn nguy hiểm nhưng hệ thống vẫn tự động xử lý/bỏ qua được (Gọi API bị timeout nhưng retry lần 2 thành công, CPU chạm ngưỡng 80%, Request không hợp lệ từ phía Client - 4xx).
+    *   *Hành động:* Theo dõi xu hướng. Nếu số lượng WARNING tăng đột biến, có thể hệ thống sắp gặp sự cố lớn.
+*   **INFORMATION (INFO):**
+    *   *Định nghĩa:* Ghi lại các cột mốc quan trọng của luồng nghiệp vụ (Ứng dụng khởi động thành công, Đơn hàng được thanh toán, Tiến trình Background bắt đầu chạy).
+    *   *Hành động:* Lưu trữ để tra cứu lịch sử luồng đi (Audit/Lịch sử giao dịch).
+*   **DEBUG:**
+    *   *Định nghĩa:* Các thông tin kỹ thuật phục vụ quá trình phát triển (Giá trị biến số, các câu SQL được sinh ra, luồng nhánh rẽ logic).
+    *   *Hành động:* **Chỉ bật ở môi trường Dev/Staging**. Phải cấu hình tự động tắt ở môi trường Production.
+*   **TRACE:**
+    *   *Định nghĩa:* Thông tin siêu chi tiết (Từng dòng code chạy qua, nội dung payload HTTP thô).
+    *   *Hành động:* Luôn tắt trên mọi môi trường, ngoại trừ khi cần debug khẩn cấp trực tiếp.
+
+### 4.3. Quy tắc vàng để Tránh "Log Rác" (Log Hygiene)
+Để giữ cho hệ thống log luôn sạch sẽ, dễ tra cứu và tiết kiệm chi phí:
+
+1.  **Nghiêm cấm log trong vòng lặp (Loop):**
+    *   *Tình huống:* Xử lý danh sách 10.000 bản ghi.
+    *   *Cách làm sai:* Ghi 1 dòng log `INFO` cho mỗi bản ghi được xử lý thành công. (Sinh ra 10.000 logs vô ích).
+    *   *Cách làm đúng:* Chỉ log 1 dòng `INFO` tổng kết sau khi chạy xong vòng lặp: `Processed {SuccessCount}/{TotalCount} items. Failed: {FailedCount}`. Nếu có bản ghi lỗi, ghi log `WARN/ERROR` riêng cho bản ghi lỗi đó.
+2.  **Không log trùng lặp (Redundant Logging / Exception Log Bloat):**
+    *   *Tình huống:* Lỗi xảy ra ở tầng Repository, ném lên Service, ném tiếp lên Controller.
+    *   *Cách làm sai:* Tầng nào cũng bắt exception, ghi log lỗi rồi lại `throw` tiếp lên. (Sinh ra 3 dòng log lỗi giống hệt nhau kèm stacktrace cồng kềnh cho cùng 1 lỗi).
+    *   *Cách làm đúng:* Chỉ ghi log lỗi **duy nhất một lần** tại nơi xử lý exception cuối cùng (thường là Global Exception Middleware) hoặc tại nơi lỗi được xử lý triệt để (rẽ nhánh logic).
+3.  **Tắt log mặc định của Thư viện bên thứ ba (Framework/Vendor Logs):**
+    *   Mặc định, các framework như ASP.NET Core, EF Core, HttpClient, Hangfire... sinh ra rất nhiều log thừa ở mức `INFO` (kết nối DB, câu query SQL, thông tin route) gây nhiễu Kibana.
+    *   *Cấu hình bắt buộc:* Từ **SDK v1.0.5**, thêm section `Serilog` vào `appsettings.json` để đè (Override) mức log của các vendor này lên `Warning` hoặc `Error`:
+        ```json
+        "Serilog": {
+          "MinimumLevel": {
+            "Default": "Information",
+            "Override": {
+              "Microsoft.EntityFrameworkCore": "Warning",
+              "System.Net.Http.HttpClient": "Warning",
+              "Hangfire": "Warning",
+              "MassTransit": "Warning"
             }
+          }
+        }
+        ```
+4.  **Hỗ trợ thay đổi Log Level động (Dynamic Log Level Changes):**
+    *   Hệ thống phải hỗ trợ thay đổi log level mà không cần restart service (ví dụ: đổi từ `INFO` sang `DEBUG` trong 10 phút để bắt lỗi trên production rồi tự động chuyển lại). Có thể hiện thực qua API Endpoint bảo mật hoặc tính năng auto-reload file cấu hình.
+
+### 4.4. Tiêu chuẩn Kiến trúc xuất Log (Log Exporters & Sinks)
+Tuyệt đối tuân thủ Kiến trúc Observability Tiêu chuẩn. Ứng dụng Microservices **không được phép** tự ý kết nối và ghi log trực tiếp ra các hệ thống bên ngoài ngoài giao thức chuẩn.
+
+*   ❌ **Nghiêm cấm:** Sử dụng các Sinks như `WriteTo.Kafka()`, `WriteTo.Elasticsearch()`, `WriteTo.File()`, `WriteTo.MongoDb()` trực tiếp trong code ứng dụng. Việc này làm phình to ứng dụng (chịu tải connection pool, xử lý retry, backpressure của DB) và phá vỡ kiến trúc tập trung.
+*   ✔️ **Bắt buộc:** Ứng dụng chỉ có **1 ĐƯỜNG RA DUY NHẤT** là dùng giao thức **OTLP (OpenTelemetry)** đẩy dữ liệu về **OpenTelemetry Collector** (Đã được cấu hình tự động trong SDK `ISC.Observability`).
+*   Nếu cần chia routing (ví dụ: Log lỗi đẩy ra Topic Kafka A, Log Info đẩy ra Topic Kafka B), việc này **phải được thực hiện trên OTel Collector**, tuyệt đối không code logic chia Topic trong ứng dụng.
+
+### 4.5. Tiêu chuẩn Ghi Log "ĐỦ"
+Một dòng log được coi là đủ thông tin phục vụ điều tra phải thỏa mãn:
+
+*   **Bắt buộc có Context liên kết:** `TraceId`, `SpanId` (chuẩn OpenTelemetry) và `CorrelationId` (chuẩn liên kết request) để liên kết log với các trục dữ liệu khác.
+*   **Có Metadata môi trường:** `Environment` (production, staging), `ServiceName`, `Version`.
+*   **Log Exception đúng cách:**
+    *   ❌ **SAI:** `_logger.LogError("Lỗi khi tạo đơn hàng: " + ex.Message);` (Mất sạch Stack Trace và các thuộc tính lỗi nội bộ).
+    *   ✔️ **ĐÚNG:** `_logger.LogError(ex, "Failed to create order for customer {CustomerName}", customerName);` (Serilog tự động bóc tách Exception thành cấu trúc dữ liệu chi tiết).
+*   **Mã hóa / Che mờ dữ liệu nhạy cảm (PII & Security):**
+    *   Tuyệt đối không log thông tin nhạy cảm: Password, OTP, Số thẻ tín dụng, Access Token.
+    *   Bắt buộc triển khai bộ lọc tự động che mờ (PII Masking Enricher) trước khi xuất log ra Console/File.
+
+---
+
+## 5. Tiêu chuẩn Tracing (Dấu vết Phân tán) - Bám sát luồng Request
+
+Tracing là công cụ đắc lực nhất để giám sát luồng request đi qua các kiến trúc phân tán hoặc các tầng logic phức tạp trong một ứng dụng.
+
+### 5.1. Trực Quan Hóa Distributed Tracing (Multi-Instrument)
+
+Nhờ sức mạnh của Auto-Instrumentation, toàn bộ luồng request chạy qua HTTP, Message Broker (Kafka), Cache (Redis), và Database (MongoDB/SQL) đều được tự động xâu chuỗi liền mạch trên cùng một biểu đồ thác nước (Waterfall). Dev có thể theo dõi chính xác thời gian thực thi của từng lớp hệ thống mà không cần viết code truyền TraceId thủ công.
+
+![Distributed Tracing Waterfall](screenshots/tracing-multi-instrument.jpg)
+
+```
+Request ────► [Gateway Span]
+                 │
+                 ├────► [Auth Service Span]
+                 │
+                 └────► [Order Service Span] (Parent)
+                           │
+                           ├────► [SQL Query Span] (Child)
+                           └────► [Call Payment API Span] (Child)
+```
+
+### 5.2. Truyền dẫn Ngữ cảnh (Context Propagation)
+*   **Chuẩn W3C Trace Context:** Bắt buộc sử dụng chuẩn W3C (`traceparent` header) khi truyền thông tin trace qua HTTP/gRPC.
+    *   Định dạng: `00-{trace_id}-{parent_id}-{trace_flags}`
+*   **Không đứt chuỗi:** Khi gọi các service ngoài (qua HTTP Client) hoặc đẩy message vào Queue (RabbitMQ, Kafka), Developer phải dùng thư viện tự động chèn (inject) thông tin trace context vào Header của request/message gửi đi. Ở phía nhận, service đích phải trích xuất (extract) context này để làm Span cha (Parent Span) cho luồng xử lý tiếp theo.
+
+> [!IMPORTANT]
+> **Bảo toàn Trace Context qua Kafka / Message Queue**
+> 
+> Khi hệ thống chuyển sang kiến trúc Event-Driven, lỗi đứt gãy Trace (Broken Trace) qua Kafka là cực kỳ phổ biến. Nguyên nhân là do các giao thức Message Broker không tự động bê nguyên HTTP Headers đi theo.
+>
+> **Tiêu chuẩn bắt buộc đối với Kafka/RabbitMQ:**
+> 1. **Producer (Nơi gửi):** Trước khi `Produce` message vào topic, bắt buộc phải chèn (Inject) ngữ cảnh hiện tại (`Activity.Current.Id` hoặc `traceparent`) vào **Kafka Message Headers**.
+> 2. **Consumer (Nơi nhận):** Khi nhận message, trước khi gọi tầng Service/Logic, bắt buộc phải đọc (Extract) `traceparent` từ Header của message. Sau đó khởi tạo một Activity/Span mới và gán `traceparent` vừa đọc làm **ParentId**.
+>
+> **Ví dụ chuẩn hóa trên Consumer (.NET):**
+> ```csharp
+> // 1. Đọc Trace Context từ Kafka Message Header
+> string? traceParent = ExtractHeader(kafkaMessage.Headers, "traceparent");
+> 
+> // 2. Bắt đầu Span mới và nối vào Span cũ của Producer
+> using var activity = MyActivitySource.StartActivity(
+>     "Process_Kafka_OrderEvent", 
+>     ActivityKind.Consumer, 
+>     parentId: traceParent // <-- CỰC KỲ QUAN TRỌNG: Nối lại chuỗi Trace
+> );
+> 
+> // 3. Thực thi logic nghiệp vụ...
+> ```
+> Nếu bỏ qua bước này, chuỗi Trace End-to-End sẽ bị đứt vỡ thành 2 mảnh rời rạc: một trace kết thúc mù tịt tại Producer và một trace mới toanh mồ côi bắt đầu tại Consumer, khiến việc debug luồng bất đồng bộ trở nên vô vọng.
+
+### 5.3. Khi nào cần tạo Custom Span?
+Auto-instrumentation của OpenTelemetry chỉ tự động bắt vết ở các rìa ứng dụng (vào/ra HTTP, SQL, Redis). Developer cần tạo **Custom Span** trong các trường hợp sau:
+1.  **Logic nghiệp vụ nặng:** Các hàm xử lý tính toán phức tạp, xử lý ảnh, mã hóa dữ liệu mất hơn 10ms.
+2.  **Khối công việc nền tảng (Background/Queue Worker):** Khi tiêu thụ một tin nhắn từ hàng đợi và chạy một chuỗi logic nội bộ dài.
+3.  **Tách biệt logic nghiệp vụ:** Muốn đo đạc chính xác thời gian thực thi của một hàm cụ thể trong tầng Service hoặc Repository để phân biệt với thời gian kết nối DB.
+
+*Ví dụ hiện thực Custom Span trong .NET:*
+```csharp
+private static readonly ActivitySource OrderActivitySource = new("MvpDemo.OrderService");
+
+public async Task ProcessOrderAsync(Order order)
+{
+    // 1. Tạo Span con (Child Span)
+    using Activity? activity = OrderActivitySource.StartActivity("ProcessOrderLogic");
+    
+    // 2. Gán Tag (Attributes) phục vụ tìm kiếm
+    activity?.SetTag("order.id", order.Id);
+    activity?.SetTag("order.total", order.TotalAmount);
+
+    try
+    {
+        await RunComplexCalculations(order);
+    }
+    catch (Exception ex)
+    {
+        // 3. Bắt buộc đánh dấu Span lỗi và lưu Exception
+        activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+        activity?.RecordException(ex);
+        throw;
+    }
+}
+```
+
+### 5.4. Quy tắc gắn Tag (Attributes) trên Spans
+*   **Chỉ gắn các Tag có lực lượng thấp (Low Cardinality):** Ví dụ: `order.status`, `payment.method`, `tenant.id`.
+*   **Không gắn dữ liệu quá lớn (High Cardinality/Unbounded):** Tuyệt đối không đưa HTTP Request/Response Body, file nhị phân, ảnh Base64, hoặc danh sách hàng nghìn phần tử vào Tag của Span. Điều này gây phình to dung lượng lưu trữ của APM cực kỳ nhanh và làm chậm tiến trình ứng dụng.
+*   **Đặt tên Tag có cấu trúc:** Sử dụng dấu chấm để phân cấp thư mục tên (ví dụ: `http.status_code`, `db.system`, `custom.order.id`).
+
+---
+
+## 6. Tiêu chuẩn Metrics (Số liệu Đo lường) - Xu hướng & Trạng thái
+
+Metrics cung cấp cái nhìn tổng quan về hiệu năng hệ thống ở dạng số liệu thống kê. Khác với Logs và Traces tập trung vào từng sự kiện đơn lẻ, Metrics tập trung vào **xu hướng hoạt động theo thời gian**.
+
+### 6.1. Hai mô hình đo lường cốt lõi
+SA và Dev cần áp dụng đồng thời hai mô hình đo lường sau:
+
+1.  **RED Pattern (Dành cho Dịch vụ/API):**
+    *   **Rate (Tần suất):** Số lượng request được gửi tới hệ thống trên giây (RPS).
+    *   **Errors (Tỉ lệ lỗi):** Số lượng request bị thất bại (mã HTTP 5xx) trên giây.
+    *   **Duration (Độ trễ):** Thời gian hệ thống hoàn thành request (Latency).
+2.  **USE Pattern (Dành cho Hạ tầng/Tài nguyên phần cứng):**
+    *   **Utilization (Mức độ sử dụng):** Tỉ lệ thời gian tài nguyên đang bận (ví dụ: CPU sử dụng 70%).
+    *   **Saturation (Độ bão hòa):** Khối lượng công việc đang phải xếp hàng đợi do tài nguyên không đáp ứng kịp (ví dụ: Thread Pool Queue Length, Memory Swap).
+    *   **Errors (Lỗi):** Số lượng lỗi phần cứng hoặc phân bổ tài nguyên xảy ra.
+
+### 6.2. Lựa chọn đúng loại Metric Instrument
+Khi định nghĩa một metric mới, Dev phải chọn đúng loại công cụ đo theo tiêu chuẩn OpenTelemetry:
+
+*   **Counter (Bộ đếm tiến):** Chỉ tăng lên, không bao giờ giảm (trừ khi reset ứng dụng).
+    *   *Ứng dụng:* Đếm tổng số request (`http.requests.total`), tổng số lỗi (`errors.total`), tổng doanh thu bán hàng.
+*   **UpDownCounter (Bộ đếm hai chiều):** Có thể tăng và giảm.
+    *   *Ứng dụng:* Đếm số lượng request đang xử lý đồng thời (Concurrent requests), số lượng job trong hàng đợi, số kết nối DB đang mở.
+*   **Histogram (Biểu đồ phân phối):** Đo lường sự phân bổ của các giá trị số thu thập được.
+    *   *Ứng dụng:* Đo thời gian xử lý request, kích thước file upload.
+    *   *Yêu cầu bắt buộc:* **Không dùng chỉ số Trung bình (Average)** làm chỉ số quyết định hiệu năng. Bắt buộc phải dùng Histogram để tính các mốc phân vị **p95, p99** để phát hiện nhóm khách hàng đang chịu độ trễ cực cao.
+*   **Gauge (Đo lường tức thời):** Đo lường giá trị tại một thời điểm cố định không cộng dồn (thường dùng cho thông số hệ thống).
+    *   *Ứng dụng:* Đo nhiệt độ CPU, dung lượng RAM trống hiện tại.
+
+### 6.3. Cảnh báo về Bùng nổ Nhãn (Cardinality Explosion)
+*   **Lực lượng (Cardinality):** Là số lượng các giá trị duy nhất có thể có của một nhãn (Label/Attribute) được đính kèm vào Metric.
+*   **Quy tắc nghiêm ngặt:** Tuyệt đối không dùng các thông tin có tính duy nhất cao làm Label cho Metric.
+    *   ❌ **Nghiêm cấm làm Label:** `user_id`, `order_id`, `email`, `timestamp`, `ip_address`.
+    *   ✔️ **Nhãn hợp lệ:** `status_code` (200, 500...), `http_method` (GET, POST), `environment` (dev, prod).
+    *   *Tại sao?* Nếu bạn đính kèm `user_id` (có 1 triệu user) vào metric `http_requests_total`, Time-series DB sẽ phải tạo ra 1 triệu đường biểu diễn thời gian riêng biệt. Điều này gây treo hệ thống giám sát ngay lập tức và làm tràn bộ nhớ (Memory Out of Memory).
+
+---
+
+## 7. Yêu cầu Thiết kế Dashboard & Các câu hỏi Vận hành cần giải quyết
+
+Một hệ thống giám sát chuẩn phải cung cấp 3 cấp độ Dashboard chuyên biệt để phục vụ các đối tượng khác nhau. Mỗi Dashboard phải trả lời được các câu hỏi vận hành thực tế cụ thể.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Executive Health Overview (Tất cả xanh? Có cần On-call?) │
+└──────────────┬──────────────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. Developer Deep-Dive (Lỗi ở API nào? Root Cause là gì?)   │
+└──────────────┬──────────────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. Infrastructure & Runtime (Có cần Scale? Rò rỉ bộ nhớ?)  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### CẤP ĐỘ 1: EXECUTIVE & OPERATIONS HEALTH OVERVIEW
+*   **Đối tượng phục vụ:** SA, Quản lý dự án, Đội ngũ trực vận hành (L1/L2 Support).
+*   **Mục tiêu:** Cung cấp bức tranh sức khỏe tổng quan của hệ thống trong vòng 5 giây nhìn.
+
+#### Các thành phần hiển thị bắt buộc:
+1.  **KPI Status (Single Value Panels):** Bốn chỉ số vàng (Golden Signals) bắt buộc phải có trên cùng:
+    *   **Total Requests:** Lưu lượng traffic tổng (Volume).
+    *   **Error Count (4xx/5xx):** Số lượng lỗi phát sinh thực tế (Ngưỡng lý tưởng: = 0).
+    *   **Max Latency (Worst-case):** Thời gian phản hồi chậm nhất. Bắt buộc phải có chỉ số này trên top KPI để bắt ngay các request bị kẹt/timeout cá biệt mà biểu đồ p95 thường tự động loại bỏ.
+    *   **Average Latency:** Thời gian phản hồi trung bình.
+2.  **RPS Time-series (Line Chart):**
+    *   Biểu đồ đường thể hiện lưu lượng truy cập theo thời gian thực để nhận diện các khung giờ cao điểm hoặc sụt giảm traffic đột ngột.
+3.  **Latency p95 & p99 (Time-series Line Chart):**
+    *   Đường biểu diễn thời gian phản hồi ở mức phân vị 95% và 99% để phát hiện hệ thống bị chậm diện rộng.
+4.  **Error Code Distribution (Pie Chart hoặc Stacked Bar Chart):**
+    *   Tỉ lệ phân bố lỗi theo mã HTTP (Phân biệt lỗi do Client - 4xx hay do Server - 5xx).
+
+#### Các câu hỏi vận hành Dashboard 1 phải trả lời được:
+*   *Câu hỏi 1:* **Hệ thống có đang "sống" không?** 
+    *   *Cách trả lời:* Nhìn vào KPI Status Liveness. Nếu đỏ, hệ thống hoặc pod đã chết.
+*   *Câu hỏi 2:* **Người dùng có đang gặp lỗi khi sử dụng dịch vụ không? Tần suất lỗi có vượt ngưỡng cảnh báo (ví dụ >1%) để cần gọi đội On-call cứu trợ gấp?**
+    *   *Cách trả lời:* Nhìn vào chỉ số Error Rate. Nếu vượt 1%, hệ thống giám sát tự động kích hoạt cảnh báo.
+*   *Câu hỏi 3:* **Hệ thống có đang bị quá tải hoặc bị tấn công DDOS không?**
+    *   *Cách trả lời:* Nhìn vào biểu đồ RPS. Nếu RPS tăng vọt bất thường so với đường cơ sở (Baseline) hàng tuần, có dấu hiệu quá tải.
+*   *Câu hỏi 4:* **Người dùng có đang trải nghiệm hệ thống mượt mà không, hay đang bị phản hồi chậm?**
+    *   *Cách trả lời:* Nhìn vào đường p95 Latency. Nếu p95 vượt quá 500ms, nghĩa là ít nhất 5% khách hàng đang phải chờ rất lâu.
+
+---
+
+### CẤP ĐỘ 2: DEVELOPER & QA DEEP-DIVE (APM)
+*   **Đối tượng phục vụ:** Developers, QA Engineers, SRE (Site Reliability Engineers).
+*   **Mục tiêu:** Hỗ trợ nhanh chóng cô lập lỗi và định vị chính xác dòng code hoặc câu query gây lỗi/gây nghẽn.
+
+#### Các thành phần hiển thị bắt buộc:
+1.  **Top 10 Slowest Endpoints (Horizontal Bar):**
+    *   Biểu đồ xếp hạng trực quan các API Route có độ trễ cao nhất.
+    *   *Tiêu chí đo lường:* p95 Latency (ms).
+2.  **Top 10 Error-Prone Endpoints (Horizontal Bar):**
+    *   Biểu đồ xếp hạng các API Route sinh ra nhiều lỗi nhất.
+    *   *Tiêu chí đo lường:* Số lượng lỗi (Error Count).
+3.  **Errors Over Time by Endpoint (Stacked Bar Chart):**
+    *   Biểu đồ cột xếp chồng thống kê lượng lỗi theo thời gian, được chia màu (split series) theo từng Endpoint. Giúp phát hiện nhanh điểm mù lỗi.
+4.  **Log Volume by Severity Level Over Time (Stacked Bar Chart):**
+    *   Biểu đồ luồng log hệ thống theo thời gian, chia màu theo mức độ nghiêm trọng (INFO, WARN, ERROR). Cực kỳ hữu ích để phát hiện sự bùng nổ log rác hoặc theo dõi tiến trình xử lý ngầm.
+
+#### Các câu hỏi vận hành Dashboard 2 phải trả lời được:
+*   *Câu hỏi 1:* **API nào đang làm chậm hệ thống nhất và cần được refactor/tối ưu hóa trước tiên?**
+    *   *Cách trả lời:* Nhìn vào biểu đồ *Top 10 Slowest Endpoints*.
+*   *Câu hỏi 2:* **Lượng lỗi tăng vọt vào lúc 2 giờ sáng đêm qua là do API nào gây ra?**
+    *   *Cách trả lời:* Nhìn vào biểu đồ *Errors Over Time by Endpoint*, trỏ chuột vào vùng cột bị nhô lên cao nhất để xem màu đó thuộc về API nào.
+*   *Câu hỏi 3:* **Ứng dụng có đang ghi log quá nhiều làm tốn dung lượng (Log Bloat) không? Có lỗi (Error) nào đang âm thầm xuất hiện trong log mà không ai hay không?**
+    *   *Cách trả lời:* Nhìn vào biểu đồ *Log Volume by Severity*. Màu xanh (INFO) là bình thường, nhưng nếu xuất hiện các cột màu đỏ (ERROR) xen kẽ, bạn cần nhảy sang Kibana Discover để tra cứu log ngay lập tức.
+
+---
+
+### CẤP ĐỘ 3: INFRASTRUCTURE & RUNTIME PERFORMANCE
+*   **Đối tượng phục vụ:** System Architects, DevOps Engineers, Infrastructure Engineers.
+*   **Mục tiêu:** Đảm bảo hạ tầng phần cứng và môi trường runtime (.NET CLR/JVM) hoạt động ổn định, phục vụ việc lập kế hoạch nâng cấp hoặc tối ưu tài nguyên (Capacity Planning).
+
+#### Các thành phần hiển thị bắt buộc:
+1.  **Resource Usage per Container/Service (Area/Line Charts):**
+    *   Tỉ lệ tiêu thụ CPU và dung lượng RAM thực tế của từng container so với giới hạn (Limit) được cấu hình trên Kubernetes/Docker.
+2.  **ThreadPool Starvation Monitors (Line/Gauge Charts):**
+    *   Số lượng Thread đang hoạt động (Active Threads) và số lượng Thread đang nằm chờ trong queue (ThreadPool Queue Length).
+3.  **Garbage Collection (GC) Stats (Bar/Line Charts):**
+    *   Thời gian tạm dừng hệ thống do GC (GC Pause Time) và dung lượng các vùng nhớ Heap (Gen 0, Gen 1, Gen 2, LOH).
+4.  **Network & Disk I/O (Line Charts):**
+    *   Tốc độ đọc/ghi đĩa và lưu lượng băng thông mạng của hệ thống DB và Storage.
+
+#### Các câu hỏi vận hành Dashboard 3 phải trả lời được:
+*   *Câu hỏi 1:* **Khi nào chúng ta cần scale out (thêm pod) hoặc scale up (tăng RAM/CPU)?**
+    *   *Cách trả lời:* Nhìn vào biểu đồ CPU/RAM Usage. Nếu CPU liên tục vượt 80% trong các giờ cao điểm, hệ thống cần được scale out.
+*   *Câu hỏi 2:* **Ứng dụng có bị rò rỉ bộ nhớ (Memory Leak) không?**
+    *   *Cách trả lời:* Quan sát biểu đồ RAM theo thời gian dài (ví dụ 7 ngày). Nếu đường biểu diễn RAM đi lên liên tục theo hình bậc thang mà không bao giờ đi xuống (dù traffic giảm), ứng dụng đang bị memory leak.
+*   *Câu hỏi 3:* **Tại sao hệ thống thỉnh thoảng bị đứng hình (Freezing) trong khoảng 1-2 giây làm tăng latency đột biến?**
+    *   *Cách trả lời:* Nhìn vào biểu đồ *GC Pause Time*. Nếu trùng khớp với thời điểm GC Gen 2 (Full GC) chạy làm đứng toàn bộ ứng dụng (Stop-the-world), cần tối ưu lại việc phân bổ bộ nhớ (Memory Allocation) trong code.
+*   *Câu hỏi 4:* **Ứng dụng có bị tình trạng "nghẽn luồng" (Thread Pool Starvation) do dùng code bất đồng bộ sai cách (Sync-over-Async) không?**
+    *   *Cách trả lời:* Nhìn vào biểu đồ *ThreadPool Queue Length*. Nếu số lượng Thread hoạt động đạt đỉnh và queue bắt đầu phình to trong khi CPU vẫn ở mức thấp, ứng dụng đang bị nghẽn luồng.
+
+---
+*Tài liệu này là quy chuẩn bắt buộc đối với toàn bộ các dự án phát triển phần mềm trong doanh nghiệp. Mọi vi phạm về cấu trúc log hoặc cố ý ghi đè/tắt telemetry mà không có sự phê duyệt của SA sẽ không được phép đưa lên môi trường Production.*
+    </script>
+    
+    <script type="text/markdown" id="raw-md-runbook">
+# 📖 Mẫu Quy Trình Vận Hành & Xử Lý Sự Cố (SOP & Runbook Template)
+
+> [!NOTE]
+> **Mục đích:** Tài liệu này kết hợp cả **Runbook** (Cách xử lý sự cố khẩn cấp) và **SOP** (Quy trình vận hành tiêu chuẩn hàng ngày). Yêu cầu viết ngắn gọn, tập trung vào hành động (Action-oriented), copy-paste lệnh chạy được ngay.
+
+## 1. Thông Tin Dịch Vụ (Service Metadata)
+- **Tên Service:** `[Tên Microservice - VD: MvpDemo.OrderService]`
+- **Team Sở Hữu (Owner):** `[Tên Team - VD: Checkout Team]`
+- **Kênh Cảnh Báo (Slack/Teams):** `[#alert-checkout-team]`
+- **Người Trực Vận Hành (On-call):** `[Link tới PagerDuty hoặc danh sách sdt]`
+
+---
+
+## 2. Quy Trình Vận Hành Tiêu Chuẩn (SOP - Hàng ngày/Chủ động)
+*Dành cho các tác vụ thay đổi, bảo trì hệ thống (Planned Actions).*
+
+### 2.1. Triển khai (Deploy) & Khôi phục (Rollback)
+- **Deploy:** Chạy Pipeline `Deploy-Prod` trên [GitLab CI / Jenkins].
+- **Rollback:** Trong trường hợp khẩn cấp, chạy Pipeline `Rollback-Prod` và điền số version an toàn trước đó.
+
+### 2.2. Tăng/Giảm Tài Nguyên (Scaling)
+- **Lệnh tăng Replicas thủ công:** `kubectl scale deployment <tên-service> --replicas=5 -n prod`
+
+### 2.3. Cập Nhật Cấu Hình (Config)
+- Thay đổi cấu hình tại repo GitOps, tạo Pull Request.
+- Cấu hình sẽ được ArgoCD tự động apply trong vòng 3 phút sau khi Merge PR.
+
+---
+
+## 3. Danh Sách Cảnh Báo & Xử Lý Sự Cố (Runbook - Phản ứng)
+*Dành cho xử lý khi nhận được tin nhắn Alert đỏ lòm giữa đêm (Reactive Actions).*
+
+### 🚨 Cảnh Báo 1: Tỉ Lệ Lỗi 5xx Tăng Đột Biến (High Error Rate)
+- **Kích hoạt khi:** Tỉ lệ lỗi HTTP 5xx vượt quá **1%** trong 5 phút.
+- **Mức độ (Severity):** `SEV-1` (Nghiêm trọng - Cần xử lý ngay).
+- **Tác động (Impact):** Khách hàng không thể tạo đơn hàng, thất thoát doanh thu trực tiếp.
+
+#### 🔍 Bước 1: Điều Tra (Investigation)
+1. Mở **[Developer Deep-Dive Dashboard](#)** trên Kibana.
+2. Kiểm tra biểu đồ **Top 10 Error-Prone Endpoints** để xem API nào đang lỗi.
+3. Click vào biểu đồ để copy `TraceId`.
+4. Dán `TraceId` vào khung search để xem chi tiết StackTrace:
+   - *Lỗi do DB?* -> Kiểm tra xem DB có đang quá tải hay kẹt lock.
+   - *Lỗi do Timeout API bên thứ 3?* -> Chuyển sang Bước 2.
+
+#### 🛠️ Bước 2: Khắc Phục Tạm Thời (Mitigation)
+*Chỉ chọn 1 phương án phù hợp để cầm máu nhanh nhất:*
+- **Phương án A (Rollback):** Nếu vừa Release version mới trong vòng 1 tiếng, lập tức Rollback về version cũ theo bước [2.1](#21-triển-khai-deploy--khôi-phục-rollback).
+- **Phương án B (Circuit Breaker):** Kích hoạt chặn luồng (Force Circuit Breaker Open) để không làm treo toàn bộ app.
+
+#### 📞 Bước 3: Leo Thang (Escalation)
+- Nếu sau 15 phút vẫn không tìm ra nguyên nhân: Gọi số Hotline của **Data/DBA Team** hoặc **Platform Team**.
+
+---
+
+### ⚠️ Cảnh Báo 2: CPU/RAM Tiêu Thụ Chạm Ngưỡng (Resource Exhaustion)
+- **Kích hoạt khi:** CPU hoặc RAM của Pod vượt ngưỡng **85%** trong 10 phút.
+- **Mức độ (Severity):** `SEV-2` (Cảnh báo - Hệ thống bị chậm nhưng chưa sập).
+
+#### 🔍 Bước 1: Điều Tra
+1. Mở **[Infrastructure Dashboard](#)**.
+2. Kiểm tra biểu đồ **Memory/CPU Usage**:
+   - Nếu RAM tăng bậc thang (Memory Leak) -> Báo Dev chuẩn bị fix bug.
+   - Nếu CPU tăng vọt cùng RPS -> Quá tải tự nhiên.
+
+#### 🛠️ Bước 2: Khắc Phục Tạm Thời
+- Scale out thủ công lên 5 Pods theo hướng dẫn ở bước [2.2](#22-tănggiảm-tài-nguyên-scaling).
+- Nếu RAM đầy, chủ động Restart Pod thủ công để giải phóng RAM tạm thời.
+
+---
+
+## 4. Quy Trình Sau Sự Cố (Post-Incident)
+- Bất kỳ sự cố `SEV-1` nào xảy ra đều **bắt buộc** phải tổ chức họp Post-Mortem trong vòng 48h.
+- Cập nhật lại chính tài liệu này nếu các bước xử lý trên bị thiếu hoặc sai.
+
+> [!TIP]
+> **Quy tắc vàng:** Sửa lỗi là việc của ngày mai. Việc của người trực On-call đêm nay là "Cầm máu" và đưa hệ thống hoạt động trở lại nhanh nhất có thể (Bằng cách Rollback, Restart, hoặc Scale up).
+    </script>
+
+    <!-- App Logic -->
+    <script>
+        // Setup marked.js renderer for custom alerts & mermaid
+        const renderer = new marked.Renderer();
+        
+        const originalBlockquote = renderer.blockquote.bind(renderer);
+        renderer.blockquote = function(quote) {
+            if (quote.includes('[!NOTE]')) {
+                return `<blockquote class="alert-note"><div class="alert-title">ℹ️ Note</div>` + quote.replace(/\\[!NOTE\\]/g, '') + `</blockquote>`;
+            } else if (quote.includes('[!TIP]')) {
+                return `<blockquote class="alert-tip"><div class="alert-title">💡 Tip</div>` + quote.replace(/\\[!TIP\\]/g, '') + `</blockquote>`;
+            } else if (quote.includes('[!IMPORTANT]')) {
+                return `<blockquote class="alert-important"><div class="alert-title">❗ Important</div>` + quote.replace(/\\[!IMPORTANT\\]/g, '') + `</blockquote>`;
+            } else if (quote.includes('[!WARNING]')) {
+                return `<blockquote class="alert-warning"><div class="alert-title">⚠️ Warning</div>` + quote.replace(/\\[!WARNING\\]/g, '') + `</blockquote>`;
+            } else if (quote.includes('[!CAUTION]')) {
+                return `<blockquote class="alert-caution"><div class="alert-title">🛑 Caution</div>` + quote.replace(/\\[!CAUTION\\]/g, '') + `</blockquote>`;
+            }
+            return originalBlockquote(quote);
+        };
+
+        const originalCode = renderer.code.bind(renderer);
+        renderer.code = function(code, language, isEscaped) {
+            if (language === 'mermaid') {
+                return `<div class="mermaid">` + code + `</div>`;
+            }
+            return originalCode(code, language, isEscaped);
+        };
+
+        marked.use({ renderer });
+
+        // Render Markdown
+        function renderMarkdown(sourceId, targetId) {
+            const raw = document.getElementById(sourceId).textContent.trim();
+            if(raw) {
+                document.getElementById(targetId).innerHTML = marked.parse(raw);
+            }
+        }
+
+        renderMarkdown('raw-md-arch', 'md-render-arch');
+        renderMarkdown('raw-md-standard', 'md-render-standard');
+        renderMarkdown('raw-md-runbook', 'md-render-runbook');
+
+        // Initialize Mermaid after rendering markdown
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+        // Scroll animations & Scroll-Spy
+        const observerOptions = {
+            root: null,
+            rootMargin: '-10% 0px -40% 0px',
+            threshold: 0
+        };
+
+        const navLinks = document.querySelectorAll('.nav-links a');
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    
+                    // Scroll spy logic
+                    const id = entry.target.getAttribute('id');
+                    if (id) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === '#' + id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.section-container').forEach(section => {
+            observer.observe(section);
         });
 
-        // Dashboard screenshot tab switcher
-        document.querySelectorAll('.db-tab').forEach(btn => {
+        // Tabs Logic
+        document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const target = btn.dataset.tab;
-
-                // Hide all panels
-                document.querySelectorAll('.db-panel').forEach(p => p.style.display = 'none');
-
-                // Show target panel
-                document.getElementById(target).style.display = 'block';
-
-                // Reset all tab styles
-                document.querySelectorAll('.db-tab').forEach(b => {
-                    b.style.background = 'rgba(255,255,255,0.05)';
-                    b.style.borderColor = 'rgba(255,255,255,0.1)';
-                    b.style.color = 'var(--text-muted)';
-                    b.classList.remove('active');
-                });
-
-                // Highlight active tab with matching color
-                const colors = { db1: '56,189,248', db2: '192,132,252', db3: '16,185,129', db4: '244,63,94' };
-                const c = colors[target];
-                btn.style.background = `rgba(${c},0.15)`;
-                btn.style.borderColor = `rgba(${c},0.4)`;
-                btn.style.color = `rgb(${c})`;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
                 btn.classList.add('active');
+                document.getElementById(btn.dataset.target).classList.add('active');
             });
         });
+
+        // Mobile Menu Logic
+        const hamburger = document.getElementById('hamburger');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        hamburger.addEventListener('click', toggleMenu);
+        overlay.addEventListener('click', toggleMenu);
+        
+        // Close menu on link click
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if(target) {
+                    window.scrollTo({
+                        top: target.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
     </script>
 </body>
 </html>
