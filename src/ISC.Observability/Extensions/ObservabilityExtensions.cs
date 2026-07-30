@@ -40,26 +40,25 @@ namespace ISC.Observability.Extensions
             var enableMongo = builder.Configuration.GetValue<bool>("Otel:EnableMongo", false);
             var enableMassTransit = builder.Configuration.GetValue<bool>("Otel:EnableMassTransit", false);
 
-            // ==========================================
-            // QA COMPLIANCE TRACKING
-            // ==========================================
-            // Removed Log.Information from here
-
-            var complianceMeter = new Meter("ISC.Observability.Compliance");
-            var activeCounter = complianceMeter.CreateCounter<int>("observability.sdk.active", description: "Tracks if the standard observability SDK is attached to a service.");
-            activeCounter.Add(1, new KeyValuePair<string, object?>("service.name", serviceName), new KeyValuePair<string, object?>("environment", environment));
 
 
             // ==========================================
             // 1. SERILOG CONFIGURATION (Structured Logging)
             // ==========================================
             
-            // Console Sink mặc định luôn là Information. 
-            // Nếu Dev muốn tiết kiệm I/O ở Production, họ BẮT BUỘC phải tự khai báo minh bạch vào appsettings.Production.json
+            // Console Sink: Tự động điều chỉnh theo môi trường
+            // - Development/Local: Bật mặc định, format plain text cho dev đọc
+            // - Production/Staging: Tắt mặc định (đã có OTel Sink), opt-in qua "Serilog:Console:Enabled": true
             var consoleLevelStr = builder.Configuration["Serilog:Console:RestrictedToMinimumLevel"];
             var consoleLevel = Enum.TryParse<LogEventLevel>(consoleLevelStr, true, out var parsedLevel) 
                 ? parsedLevel 
                 : LogEventLevel.Information;
+
+            var isDevEnvironment = builder.Environment.IsDevelopment() 
+                || string.Equals(environment, "Local", StringComparison.OrdinalIgnoreCase);
+            var consoleSinkEnabled = builder.Configuration["Serilog:Console:Enabled"] is { } enabledStr
+                ? bool.Parse(enabledStr)
+                : isDevEnvironment;
 
             // SDK đặt mặc định hợp lý, Dev có thể override qua appsettings.json section "Serilog"
             var logConfig = new LoggerConfiguration()
@@ -73,23 +72,39 @@ namespace ISC.Observability.Extensions
                 .Enrich.WithProperty("ApplicationVersion", serviceVersion)
                 .Enrich.WithMachineName()
                 .Enrich.WithThreadId()
-                .Enrich.With<PiiMaskingEnricher>()
-                // Cấu hình Console Sink: Tiết kiệm I/O ở Production, cho phép override cấu hình
-                .WriteTo.Console(
-                    formatter: new Serilog.Formatting.Compact.RenderedCompactJsonFormatter(),
-                    restrictedToMinimumLevel: consoleLevel)
-                // Cấu hình OpenTelemetry Sink: Bắn log qua OTLP về OTel Collector
-                .WriteTo.OpenTelemetry(options =>
+                .Enrich.With<PiiMaskingEnricher>();
+
+            // Console Sink: Chỉ bật khi cần
+            if (consoleSinkEnabled)
+            {
+                if (isDevEnvironment)
                 {
-                    options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
-                    options.Protocol = OtlpProtocol.HttpProtobuf;
-                    options.ResourceAttributes = new Dictionary<string, object>
-                    {
-                        ["service.name"] = serviceName,
-                        ["service.version"] = serviceVersion,
-                        ["deployment.environment"] = environment
-                    };
-                });
+                    // Dev: Format plain text cho mắt người
+                    logConfig.WriteTo.Console(
+                        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                        restrictedToMinimumLevel: consoleLevel);
+                }
+                else
+                {
+                    // Non-Dev (opt-in): JSON cho container log scraping
+                    logConfig.WriteTo.Console(
+                        formatter: new Serilog.Formatting.Compact.RenderedCompactJsonFormatter(),
+                        restrictedToMinimumLevel: consoleLevel);
+                }
+            }
+
+            // OpenTelemetry Sink: Luôn bắn log qua OTLP về OTel Collector
+            logConfig.WriteTo.OpenTelemetry(options =>
+            {
+                options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
+                options.Protocol = OtlpProtocol.HttpProtobuf;
+                options.ResourceAttributes = new Dictionary<string, object>
+                {
+                    ["service.name"] = serviceName,
+                    ["service.version"] = serviceVersion,
+                    ["deployment.environment"] = environment
+                };
+            });
 
             // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
             // SDK tự đặt mặc định là Information
@@ -110,6 +125,13 @@ namespace ISC.Observability.Extensions
             Log.Information("Standard Observability SDK initialized for {ServiceName} with Environment {Environment}. [Compliance=True]", serviceName, environment);
 
             builder.Services.AddSerilog();
+
+            // ==========================================
+            // QA COMPLIANCE TRACKING (Hosted Service)
+            // ==========================================
+            // Registered as IHostedService so Counter.Add() runs AFTER MeterProvider is initialized.
+            // This fixes the no-op bug where metrics were lost because Add() was called before Build().
+            builder.Services.AddHostedService<ComplianceMetricsService>();
 
             // ==========================================
             // 2. OPENTELEMETRY CONFIGURATION (Traces & Metrics)
