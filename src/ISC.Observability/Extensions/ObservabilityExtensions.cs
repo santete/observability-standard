@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Diagnostics.Metrics;
+
 using System.Reflection;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -22,6 +22,10 @@ namespace ISC.Observability.Extensions
         public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null)
         {
             var serviceName = builder.Configuration["ServiceName"] ?? defaultServiceName;
+
+            // Lưu serviceName đã resolve vào config để các hosted service (ComplianceMetricsService) đọc được,
+            // vì hosted service không có access vào tham số defaultServiceName.
+            builder.Configuration["ISC:Observability:ResolvedServiceName"] = serviceName;
             
             var assembly = Assembly.GetEntryAssembly();
             var autoVersion = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
@@ -57,7 +61,8 @@ namespace ISC.Observability.Extensions
             var isDevEnvironment = builder.Environment.IsDevelopment() 
                 || string.Equals(environment, "Local", StringComparison.OrdinalIgnoreCase);
             var consoleSinkEnabled = builder.Configuration["Serilog:Console:Enabled"] is { } enabledStr
-                ? bool.Parse(enabledStr)
+                && bool.TryParse(enabledStr, out var enabledParsed)
+                ? enabledParsed
                 : isDevEnvironment;
 
             // SDK đặt mặc định hợp lý, Dev có thể override qua appsettings.json section "Serilog"
@@ -133,6 +138,14 @@ namespace ISC.Observability.Extensions
             // This fixes the no-op bug where metrics were lost because Add() was called before Build().
             builder.Services.AddHostedService<ComplianceMetricsService>();
 
+            // Configure Propagators (W3C + B3 for Istio/Envoy mesh compatibility)
+            OpenTelemetry.Sdk.SetDefaultTextMapPropagator(new OpenTelemetry.Context.Propagation.CompositeTextMapPropagator(new OpenTelemetry.Context.Propagation.TextMapPropagator[]
+            {
+                new OpenTelemetry.Context.Propagation.TraceContextPropagator(),
+                new OpenTelemetry.Context.Propagation.B3Propagator(),
+                new OpenTelemetry.Context.Propagation.BaggagePropagator()
+            }));
+
             // ==========================================
             // 2. OPENTELEMETRY CONFIGURATION (Traces & Metrics)
             // ==========================================
@@ -168,6 +181,7 @@ namespace ISC.Observability.Extensions
 
                     tracing
                         .AddSource(serviceName)
+                        .AddSource("*") // Wildcard: Capture all custom ActivitySources created by Devs
                         .AddOtlpExporter(opt =>
                         {
                             opt.Endpoint = new Uri(otlpGrpcEndpoint);
