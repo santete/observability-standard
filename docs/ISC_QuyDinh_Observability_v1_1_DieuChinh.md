@@ -138,21 +138,26 @@ Mẫu tin log xuất ra từ ứng dụng phải tuân thủ định dạng JSON
 ## 6. QUY ĐỊNH VỀ METRICS
 
 ### 6.1. Danh mục metrics bắt buộc
-| Metric | Kiểu | Attributes (Labels) bắt buộc | Ý nghĩa |
-|---|---|---|---|
-| `http.server.request.duration` | Histogram | `service_name`, `http.route`, `http.request.method`, `http.response.status_code` | Thời gian phản hồi request (tính latency p50/p95/p99) |
-| `http_server_requests_total` | Counter | `service_name`, `route`, `method`, `status` | Tổng số request, tính RPS và Error Rate |
-| **`observability.sdk.active`** | **Gauge / Counter** | **`service_name`, `environment`, `sdk_version`** | **Tín hiệu tuân thủ SDK chuẩn hóa (phục vụ Quality Gate 2)** |
-| `app_errors_total` | Counter | `service_name`, `error_code` | Số lỗi theo từng mã lỗi |
-| `app_dependency_duration_ms` | Histogram | `service_name`, `target` | Thời gian phụ thuộc bên ngoài (DB, Cache, External API) |
+| Metric | Kiểu | Labels (Attributes) bắt buộc | Ý nghĩa | Cơ chế sinh |
+|---|---|---|---|---|
+| `http_server_requests_total` | Counter | `service_name`, `route`, `method`, `status_code` | Tổng số request, tính RPS và Error Rate | SDK tự động 100% |
+| `http_server_duration_ms` | Histogram | `service_name`, `route`, `method` | Thời gian xử lý request (Latency p50/p95/p99) | SDK tự động 100% |
+| `observability.sdk.active` | Counter / Gauge | `service_name`, `environment`, `sdk_version` | Tín hiệu xác nhận service đã tích hợp SDK chuẩn hóa | SDK tự động 100% |
+| `app_errors_total` | Counter | `service_name`, `error_code` | Số lỗi nghiệp vụ theo phân loại mã lỗi | Developer tự gắn |
+| `app_dependency_duration_ms` | Histogram | `service_name`, `target` | Thời gian gọi hệ thống ngoài (DB, API, Queue) | Developer tự gắn |
 
-> Các metrics tài nguyên hạ tầng (CPU, RAM, GC, ThreadPool) do runtime SDK cung cấp sẵn; dự án chỉ cần kích hoạt thu thập, không tự lập trình.
+> *(Lưu ý: `service_name` là Resource Attribute do SDK tự động gắn ở cấp ứng dụng, Developer không cần truyền thủ công trong từng câu lệnh đo metric).*
 
-### 6.2. Quy tắc đặt tên metrics
-* Chữ thường, phân cách bằng `_` hoặc `.`, thể hiện rõ đơn vị đo lường.
-* Attributes/Labels không chứa giá trị biến thiên cao (`user_id`, `order_id`, `email`) — gây nổ cardinality làm quá tải backend lưu trữ.
+### 6.2. Quy tắc đặt tên metrics và quản lý Labels (Chống bùng nổ Cardinality)
+* **Tên metric:** Chữ thường, phân cách bằng dấu gạch dưới `_`, kết thúc bằng đơn vị tính (`_total`, `_ms`, `_bytes`).
+* **Tên label (Label Key):** 100% sử dụng định dạng `snake_case` (ví dụ: `service_name`, `status_code`, `error_code`).
+* **Quy chuẩn nhãn `route`:** Bắt buộc dùng **Route Template** (ví dụ: `/api/orders/{id}`), tuyệt đối không dùng raw URL chứa ID cụ thể.
+* **Quy chuẩn nhãn `status_code`:** Bắt buộc là mã HTTP (ví dụ: `200`, `400`, `500`).
+* **Quy chuẩn nhãn `method`:** Giá trị viết HOA (`GET`, `POST`, `PUT`, `DELETE`).
+* **Quy chuẩn nhãn `error_code`:** Là mã danh mục lỗi nghiệp vụ (ví dụ: `PAYMENT_TIMEOUT`), nghiêm cấm đưa exception message vào nhãn.
+* **Quy chuẩn nhãn `target`:** Là tên microservice đích (ví dụ: `billing-svc`) hoặc hostname bên thứ ba, không đưa URL kèm tham số.
 
-> **BLOCKER:** Đặt ID người dùng hoặc ID giao dịch làm label/attribute của metric.
+> **BLOCKER:** Đặt giá trị biến thiên cao (User ID, Order ID, Transaction ID, Raw URL, Error Message) làm label của metric gây sập hạ tầng giám sát.
 
 ---
 

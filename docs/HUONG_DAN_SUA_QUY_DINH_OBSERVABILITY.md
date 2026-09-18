@@ -2,37 +2,16 @@
 
 > **Dành cho:** Người phụ trách chỉnh sửa văn bản quy định trên SharePoint / Word  
 > **Tài liệu gốc cần sửa:** `ISC_QuyDinh_Observability_v1_0.docx` (hoặc bản PDF tương ứng)  
-> **Mục tiêu:** Đồng bộ văn bản quy định với thực tế vận hành hạ tầng ISC, bộ quy chuẩn `indexing-rules` và SDK `ISC.Observability v1.4.2`.  
+> **Mục tiêu:** Đồng bộ văn bản quy định với thực tế vận hành hạ tầng ISC và SDK `ISC.Observability v1.4.2`.  
 > **Cách làm:** Tìm đúng vị trí đề mục trong file Word, xem đối chiếu **Nội dung cũ** và copy toàn bộ **Nội dung mới** dán đè lên.
 
 ---
 
-## DANH SÁCH 8 HẠNG MỤC CẦN SỬA ĐỔI
+## DANH SÁCH 7 HẠNG MỤC CẦN SỬA ĐỔI
 
 ---
 
-### HẠNG MỤC 1: SỬA CÁC TIÊU ĐỀ BỊ LỖI LẶP TỪ (CHÍNH TẢ)
-*Trong văn bản hiện tại, hầu hết tiêu đề các mục đang bị lặp lại từ cuối cùng do lỗi sao chép văn bản.*
-
-| Trang | Vị trí mục | Tiêu đề HIỆN TẠI (Bị lỗi) | Tiêu đề MỚI (Copy & Paste đè lên) |
-|:---:|---|---|---|
-| **Trang 2** | Mục 3.1 | 3.1 Phân công trách nhiệm **nhiệm** | **3.1 Phân công trách nhiệm** |
-| **Trang 3** | Mục 3.2 | 3.2 Mức độ tuân thủ và thẩm quyền xác định **định** | **3.2 Mức độ tuân thủ và thẩm quyền xác định** |
-| **Trang 4** | Mục 4.1 | 4.1 Cấu trúc bản ghi log**ghi log** | **4.1 Cấu trúc bản ghi log** |
-| **Trang 4** | Mục 4.2 | 4.2 Các điểm bắt buộc ghi log**ghi log** | **4.2 Các điểm bắt buộc ghi log** |
-| **Trang 4** | Mục 4.3 | 4.3 Các hành vi không được phép **phép** | **4.3 Các hành vi không được phép** |
-| **Trang 5** | Mục 5.1 | 5.1 Truyền trace context giữa các service**các service** | **5.1 Truyền trace context giữa các service** |
-| **Trang 5** | Mục 5.2 | 5.2 Các span bắt buộc khởi tạo **tạo** | **5.2 Các span bắt buộc khởi tạo** |
-| **Trang 5** | Mục 5.3 | 5.3 Nguyên tắc thực hiện **hiện** | **5.3 Nguyên tắc thực hiện** |
-| **Trang 6** | Mục 6.1 | 6.1 Danh mục metrics bắt buộc **buộc** | **6.1 Danh mục metrics bắt buộc** |
-| **Trang 6** | Mục 6.2 | 6.2 Quy tắc đặt tên metrics**tên metrics** | **6.2 Quy tắc đặt tên metrics** |
-| **Trang 6** | Mục 7.1 | 7.1 Tham số cấu hình bắt buộc **buộc** | **7.1 Tham số cấu hình chuẩn cho ứng dụng** |
-| **Trang 7** | Mục 7.3 | 7.3 Anti-pattern bị nghiêm cấm **cấm** | **7.3 Anti-pattern bị nghiêm cấm** |
-| **Trang 8** | Mục 9.3 | 9.3 Hạ tầng & Dashboard**tầng & Dashboard** | **9.3 Hạ tầng & Dashboard** |
-
----
-
-### HẠNG MỤC 2: MỤC 2 - THUẬT NGỮ VÀ ĐỊNH NGHĨA (Trang 1)
+### HẠNG MỤC 1: MỤC 2 - THUẬT NGỮ VÀ ĐỊNH NGHĨA (Trang 1)
 
 * **Vị trí cần tìm:** Dòng định nghĩa thuật ngữ **`Label`** trong bảng Thuật ngữ.
 * **Nội dung CŨ:**
@@ -42,25 +21,25 @@
 
 ---
 
-### HẠNG MỤC 3: MỤC 4.1 - CẤU TRÚC BẢN GHI LOG (Trang 4)
+### HẠNG MỤC 2: MỤC 4.1 - CẤU TRÚC BẢN GHI LOG (Trang 4)
 
 * **Vị trí cần tìm:** Toàn bộ khối JSON và ghi chú tại **Mục 4.1**.
 * **Nội dung CŨ:**
   ```json
-  {
-   "timestamp": "2026-09-17T10:23:45.123Z",
-   "level": "INFO",
-   "service": "payment-service",
-   "env": "prod",
-   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-   "span_id": "00f067aa0ba902b7",
-   "event": "payment.authorized",
-   "message": "Payment authorized",
-   "duration_ms": 128,
-   "order_id": "ORD-10422"
-  }
+  { 
+    "timestamp": "2026-09-17T10:23:45.123Z", 
+    "level": "INFO", 
+    "service": "payment-service", 
+    "env": "prod", 
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", 
+    "span_id": "00f067aa0ba902b7", 
+    "event": "payment.authorized", 
+    "message": "Payment authorized", 
+    "duration_ms": 128, 
+    "order_id": "ORD-10422" 
+  } 
   ```
-  *(kèm dòng: BLOCKER: Thiếu trace_id, service hoặc level...)*
+  *(kèm dòng: BLOCKER: Thiếu trace_id, service hoặc level — log không dùng được để điều tra sự cố.)*
 
 * **Nội dung MỚI (Copy & Paste toàn bộ khối bên dưới đè lên Mục 4.1):**
 
@@ -97,7 +76,7 @@
 
 ---
 
-### HẠNG MỤC 4: MỤC 5.1 - TRUYỀN TRACE CONTEXT GIỮA CÁC SERVICE (Trang 5)
+### HẠNG MỤC 3: MỤC 5.1 - TRUYỀN TRACE CONTEXT GIỮA CÁC SERVICE (Trang 5)
 
 * **Vị trí cần tìm:** Đoạn văn bản đầu tiên của **Mục 5.1**.
 * **Nội dung CŨ:**
@@ -110,31 +89,61 @@
 
 ---
 
-### HẠNG MỤC 5: MỤC 5.2 - BẢNG CÁC SPAN BẮT BUỘC KHỞI TẠO (Trang 5)
+### HẠNG MỤC 4: MỤC 5.2 - BẢNG CÁC SPAN BẮT BUỘC KHỞI TẠO (Trang 5)
 
 * **Vị trí cần tìm:** Dòng thứ 2 trong bảng ở Mục 5.2 (Hoạt động: *Gọi HTTP ra ngoài*).
 * **Nội dung CŨ:**
   > Tên span: `HTTP GET payment-service`
 * **Nội dung MỚI (Copy & Paste đè lên ô Tên span):**
   > `HTTP GET payment-svc`
-* *Lý do:* Tên service bắt buộc dùng định dạng kebab-case kèm hậu tố `-svc` theo quy định đặt tên microservice của ISC.
+* *(Lý do: Tên service bắt buộc dùng định dạng kebab-case kèm hậu tố `-svc` theo quy định đặt tên microservice của ISC).*
 
 ---
 
-### HẠNG MỤC 6: MỤC 6.1 - DANH MỤC METRICS BẮT BUỘC (Trang 6)
+### HẠNG MỤC 5: MỤC 6.1 VÀ 6.2 - QUY ĐỊNH VỀ METRICS VÀ LABELS (Trang 6)
 
-* **Vị trí cần tìm:** Bảng danh mục metrics ở **Mục 6.1**.
-* **Cách sửa:**
-  1. Thêm **1 dòng mới** vào bảng:
-     * Cột Metric: **`observability.sdk.active`**
-     * Cột Kiểu: **`Gauge / Counter`**
-     * Cột Label bắt buộc: **`service_name, environment, sdk_version`**
-     * Cột Ý nghĩa: **`Tín hiệu xác nhận service đã tích hợp SDK chuẩn hóa (phục vụ Quality Gate 2)`**
-  2. Đổi nhãn `service` ở tất cả các dòng khác trong bảng thành **`service_name`** (định dạng `snake_case`).
+* **Vị trí cần tìm:** Toàn bộ bảng metrics ở **Mục 6.1** và các gạch đầu dòng ở **Mục 6.2**.
+* **Nội dung CŨ:**
+  * Bảng Mục 6.1 cũ:
+    | Metric | Kiểu | Label bắt buộc | Ý nghĩa |
+    |---|---|---|---|
+    | `http_server_requests_total` | Counter | `service, route, method, status` | Số request, suy ra RPS và Error Rate |
+    | `http_server_duration_ms` | Histogram | `service, route, method` | Latency p50/p95/p99 |
+    | `app_errors_total` | Counter | `service, error_code` | Số lỗi theo loại |
+    | `app_dependency_duration_ms` | Histogram | `service, target` | Thời gian gọi hệ thống ngoài |
+  * Mục 6.2 cũ:
+    * Chữ thường, phân cách bằng `_`, kết thúc bằng đơn vị (`_ms`, `_bytes`, `_total`)
+    * Label không chứa giá trị biến thiên cao (`user_id`, `order_id`, `email`) — gây nổ cardinality
+    * BLOCKER: Đặt ID người dùng hoặc ID giao dịch làm label của metric.
+
+* **Nội dung MỚI (Copy & Paste toàn bộ đoạn dưới đè lên Mục 6.1 và 6.2):**
+
+  > **6.1 Danh mục metrics bắt buộc**
+  >
+  > | Metric | Kiểu | Labels (Attributes) bắt buộc | Ý nghĩa | Cơ chế sinh |
+  > |---|---|---|---|---|
+  > | `http_server_requests_total` | Counter | `service_name`, `route`, `method`, `status_code` | Tổng số request, tính RPS và Error Rate | SDK tự động 100% |
+  > | `http_server_duration_ms` | Histogram | `service_name`, `route`, `method` | Thời gian xử lý request (Latency p50/p95/p99) | SDK tự động 100% |
+  > | `observability.sdk.active` | Counter/Gauge | `service_name`, `environment`, `sdk_version` | Tín hiệu xác nhận service đã tích hợp SDK chuẩn hóa | SDK tự động 100% |
+  > | `app_errors_total` | Counter | `service_name`, `error_code` | Số lỗi nghiệp vụ theo phân loại mã lỗi | Developer tự gắn |
+  > | `app_dependency_duration_ms` | Histogram | `service_name`, `target` | Thời gian gọi hệ thống ngoài (DB, API, Queue) | Developer tự gắn |
+  >
+  > *(Lưu ý: `service_name` là Resource Attribute do SDK tự động gắn ở cấp ứng dụng, Developer không cần truyền thủ công trong từng câu lệnh đo metric).*
+  >
+  > **6.2 Quy tắc đặt tên metrics và quản lý Labels (Chống bùng nổ Cardinality)**
+  > • Tên metric: Chữ thường, phân cách bằng dấu gạch dưới `_`, kết thúc bằng đơn vị tính (`_total`, `_ms`, `_bytes`).  
+  > • Tên label (Label Key): 100% sử dụng định dạng `snake_case` (ví dụ: `service_name`, `status_code`, `error_code`).  
+  > • **Quy chuẩn nhãn `route`:** Bắt buộc dùng **Route Template** (ví dụ: `/api/orders/{id}`), tuyệt đối không dùng raw URL chứa ID cụ thể.  
+  > • **Quy chuẩn nhãn `status_code`:** Bắt buộc là mã HTTP (ví dụ: `200`, `400`, `500`).  
+  > • **Quy chuẩn nhãn `method`:** Giá trị viết HOA (`GET`, `POST`, `PUT`, `DELETE`).  
+  > • **Quy chuẩn nhãn `error_code`:** Là mã danh mục lỗi nghiệp vụ (ví dụ: `PAYMENT_TIMEOUT`), nghiêm cấm đưa exception message vào nhãn.  
+  > • **Quy chuẩn nhãn `target`:** Là tên microservice đích (ví dụ: `billing-svc`) hoặc hostname bên thứ ba, không đưa URL kèm tham số.  
+  >
+  > **BLOCKER:** Đặt giá trị biến thiên cao (User ID, Order ID, Transaction ID, Raw URL, Error Message) làm label của metric gây sập hạ tầng giám sát.
 
 ---
 
-### HẠNG MỤC 7: MỤC 7.1 - THAM SỐ CẤU HÌNH BẮT BUỘC (Trang 6)
+### HẠNG MỤC 6: MỤC 7.1 - THAM SỐ CẤU HÌNH BẮT BUỘC (Trang 6)
 
 * **Vị trí cần tìm:** Toàn bộ nội dung chữ và code ở **Mục 7.1**.
 * **Nội dung CŨ:**
@@ -173,7 +182,7 @@
 
 ---
 
-### HẠNG MỤC 8: MỤC 8 - QUY ĐỊNH VỀ DASHBOARD GIÁM SÁT (Trang 8)
+### HẠNG MỤC 7: MỤC 8 - QUY ĐỊNH VỀ DASHBOARD GIÁM SÁT (Trang 8)
 
 * **Vị trí cần tìm:** Dòng **Layer 4 · QA Compliance Tracker** trong bảng ở Mục 8.
 * **Nội dung CŨ:**
