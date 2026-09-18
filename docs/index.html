@@ -616,21 +616,21 @@ Mô hình kiến trúc High-Level phân định ranh giới trách nhiệm giữ
 
 ```mermaid
 flowchart TD
-    subgraph DevDomain [Developer Domain]
-        App[.NET Microservice]
-        SDK[OpenTelemetry SDK]
+    subgraph DevDomain ["Developer Domain"]
+        App[".NET Microservice"]
+        SDK["OpenTelemetry SDK"]
         App --> SDK
     end
 
-    subgraph Interface [OTLP Interface]
-        OTLP[OTLP HTTP 4318 / Port 80 (Mặc định ISC) <br> gRPC 4317 (Tuỳ chọn)]
+    subgraph Interface ["OTLP Interface"]
+        OTLP["OTLP HTTP 4318 / Port 80 - Mặc định ISC<br/>gRPC 4317 - Tuỳ chọn"]
     end
 
-    subgraph DevOpsDomain [DevOps/SRE Domain]
-        Collector[OTel Collector]
-        Elastic[Elasticsearch]
-        Kibana[Kibana]
-        Kafka[Kafka]
+    subgraph DevOpsDomain ["DevOps / SRE Domain"]
+        Collector["OTel Collector"]
+        Elastic["Elasticsearch"]
+        Kibana["Kibana"]
+        Kafka["Kafka"]
         
         Collector --> Elastic
         Collector --> Kafka
@@ -1228,8 +1228,17 @@ Một hệ thống giám sát chuẩn phải cung cấp 3 cấp độ Dashboard 
         renderMarkdown('raw-md-standard', 'md-render-standard');
         renderMarkdown('raw-md-runbook', 'md-render-runbook');
 
-        // Initialize Mermaid after rendering markdown
-        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        // Initialize and render Mermaid diagrams
+        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+        try {
+            if (typeof mermaid.run === 'function') {
+                mermaid.run();
+            } else if (typeof mermaid.init === 'function') {
+                mermaid.init();
+            }
+        } catch (e) {
+            console.error('Mermaid render error:', e);
+        }
 
         // Scroll animations & Scroll-Spy
         const observerOptions = {
