@@ -115,7 +115,7 @@
   > Tên span: `HTTP GET payment-service`
 * **Nội dung MỚI (Copy & Paste đè lên ô Tên span):**
   > `HTTP GET payment-svc`
-* *Lý do:* Tên service bắt buộc dùng hậu tố `-svc` theo quy chuẩn `R-SVC-001`.
+* *Lý do:* Tên service bắt buộc dùng định dạng kebab-case kèm hậu tố `-svc` theo quy định đặt tên microservice của ISC.
 
 ---
 
