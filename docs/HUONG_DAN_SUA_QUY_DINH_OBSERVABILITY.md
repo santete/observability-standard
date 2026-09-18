@@ -64,72 +64,34 @@
 
 * **Nội dung MỚI (Copy & Paste toàn bộ khối bên dưới đè lên Mục 4.1):**
 
-  > **4.1 Cấu trúc bản ghi log chuẩn (Mô hình OTLP Log Model từ SDK)**  
-  > Toàn bộ log xuất ra từ ứng dụng phải tuân thủ cấu trúc JSON chuẩn OTLP theo quy chuẩn `R-OBS-FIELD-001` (toàn bộ field dùng `snake_case`) và `R-SVC-001`. Cấu trúc chi tiết thực tế từ SDK bao gồm 3 nhóm thông tin:
+  > **4.1 Cấu trúc bản ghi log**
   >
   > ```json
   > {
-  >   /* --- [NHÓM 1] CÁC TRƯỜNG MỨC GIAO THỨC (BẮT BUỘC) --- */
-  >   "timestamp": "2026-09-18T06:40:00.1234567Z",
-  >   "severity_text": "Information",                       // Mức log: Information | Warning | Error
-  >   "severity_number": 9,
-  >   "body": "Xử lý thanh toán đơn hàng ORD-10422 thành công cho khách hàng a***@fpt.com",
-  >   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",      // [BẮT BUỘC] W3C Trace ID 32 ký tự
-  >   "span_id": "00f067aa0ba902b7",                        // [BẮT BUỘC] W3C Span ID 16 ký tự
-  > 
-  >   /* --- [NHÓM 2] ĐỊNH DANH DỊCH VỤ (RESOURCE ATTRIBUTES - BẮT BUỘC) --- */
-  >   "resource": {
-  >     "service.name": "payment-svc",                      // [BẮT BUỘC] kebab-case + "-svc" (R-SVC-001)
-  >     "service.version": "1.4.2",                         // [BẮT BUỘC] Phiên bản app / Git SHA
-  >     "deployment.environment": "production"              // [BẮT BUỘC] production | staging | dev
-  >   },
-  > 
-  >   /* --- [NHÓM 3] THUỘC TÍNH CHI TIẾT (ATTRIBUTES / CONTEXT) --- */
-  >   "attributes": {
-  >     // 1. Thuộc tính hệ thống [BẮT BUỘC - SDK TỰ ĐỘNG GẮN]:
-  >     "service_name": "payment-svc",                      // [BẮT BUỘC] snake_case (R-OBS-FIELD-001)
-  >     "environment": "production",                        // [BẮT BUỘC] snake_case (R-OBS-FIELD-001)
-  >     "application_version": "1.4.2",                     // [BẮT BUỘC]
-  >     "machine_name": "pod-payment-svc-78f94c8b-2x9la",   // Tên Pod K8s / Server vật lý
-  >     "thread_id": 24,                                    // ID luồng xử lý của .NET runtime
-  >     "correlation_id": "req-9b1deb4d-3b7d-4bad-9bdd",    // [BẮT BUỘC] Mã liên kết luồng nghiệp vụ
-  >     "request_id": "req-9b1deb4d-3b7d-4bad-9bdd",        // [BẮT BUỘC] Đồng bộ chuẩn API meta.request_id
-  >     "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-  >     "span_id": "00f067aa0ba902b7",
-  >     
-  >     // 2. Thuộc tính HTTP Request [SDK TỰ ĐỘNG GẮN TRONG MIDDLEWARE]:
-  >     "request_host": "api.domain.com",
-  >     "request_path": "/v1/payments/process",
-  >     "request_method": "POST",
-  >     "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
-  > 
-  >     // 3. Biến nghiệp vụ [BẮT BUỘC DÙNG snake_case DO DEV GHI THEO R-OBS-FIELD-001]:
-  >     "order_id": "ORD-10422",
-  >     "payment_method": "qr_code",
-  >     "amount": 150000.0,
-  >     "transaction_id": "TX-998877",
-  > 
-  >     // 4. Thuộc tính nhạy cảm [SDK TỰ ĐỘNG CHE MỜ MASKING PII]:
-  >     "customer_email": "a***@fpt.com",
-  >     "customer_phone": "090*****89"
-  >   }
+  >   "timestamp": "2026-09-18T06:40:00.123Z",
+  >   "level": "INFO",
+  >   "service_name": "payment-svc",
+  >   "environment": "production",
+  >   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  >   "span_id": "00f067aa0ba902b7",
+  >   "correlation_id": "req-9b1deb4d-3b7d-4bad-9bdd",
+  >   "message": "Payment authorized"
   > }
   > ```
-  > 
-  > **BLOCKER:** Thiếu `trace_id`, `service_name` hoặc `severity_text` (level) — log không dùng được để điều tra sự cố cross-service. Cố tình ghi đè hoặc vô hiệu hóa các trường này sẽ bị từ chối phê duyệt Merge Request / Quality Gate 2.
-  > 
-  > **Bảng tóm tắt trách nhiệm các trường:**
-  > | Tên trường | Tính bắt buộc | Bên chịu trách nhiệm | Quy chuẩn áp dụng |
-  > |---|---|---|---|
-  > | `timestamp` | **BẮT BUỘC** | **SDK tự sinh** | Giờ UTC theo chuẩn ISO 8601. |
-  > | `severity_text` | **BẮT BUỘC** | **SDK / Dev** | `Information`, `Warning`, `Error`. |
-  > | `trace_id` | **BẮT BUỘC** | **SDK tự sinh** | W3C Trace ID liên kết chuỗi request. |
-  > | `span_id` | **BẮT BUỘC** | **SDK tự sinh** | W3C Span ID của bước thực thi. |
-  > | `correlation_id` | **BẮT BUỘC** | **SDK tự sinh** | Mã đối soát request xuyên suốt hệ thống. |
-  > | `service_name` | **BẮT BUỘC** | **SDK tự sinh** | Tên service có đuôi `-svc` (`R-SVC-001`). |
-  > | `environment` | **BẮT BUỘC** | **SDK tự sinh** | `production`, `staging`, `development`. |
-  > | `body` / `message` | **BẮT BUỘC** | **Developer** | Thông điệp mô tả sự kiện (Message Template). |
-  > | **Tham số nghiệp vụ** *(vd: `order_id`, `amount`)* | **BẮT BUỘC** *(khi có)* | **Developer** | **PHẢI dùng `snake_case`** (`R-OBS-FIELD-001`). Cấm PascalCase, camelCase. |
+  >
+  > **BLOCKER:** Thiếu `trace_id`, `service_name` hoặc `level` — log không dùng được để điều tra sự cố.
+  >
+  > **Các trường bắt buộc trong bản ghi log:**
+  > | Tên trường | Tính bắt buộc | Ý nghĩa |
+  > |---|---|---|
+  > | `timestamp` | Bắt buộc | Thời gian ghi nhận sự kiện theo chuẩn ISO 8601 UTC. |
+  > | `level` | Bắt buộc | Mức độ nghiêm trọng của log (`INFO`, `WARN`, `ERROR`). |
+  > | `service_name` | Bắt buộc | Tên microservice (định dạng `kebab-case` kèm hậu tố `-svc`). |
+  > | `environment` | Bắt buộc | Môi trường triển khai (`production`, `staging`, `dev`). |
+  > | `trace_id` | Bắt buộc | Mã định danh truy vết phân tán xuyên suốt các service. |
+  > | `span_id` | Bắt buộc | Mã định danh công đoạn thực thi hiện tại. |
+  > | `correlation_id` | Bắt buộc | Mã đối soát request từ Client/Gateway gửi vào. |
+  > | `message` | Bắt buộc | Nội dung thông điệp mô tả sự kiện. |
 
 ---
 
@@ -166,7 +128,7 @@
      * Cột Kiểu: **`Gauge / Counter`**
      * Cột Label bắt buộc: **`service_name, environment, sdk_version`**
      * Cột Ý nghĩa: **`Tín hiệu xác nhận service đã tích hợp SDK chuẩn hóa (phục vụ Quality Gate 2)`**
-  2. Đổi nhãn `service` ở tất cả các dòng khác trong bảng thành **`service_name`** (theo chuẩn `R-OBS-FIELD-001`).
+  2. Đổi nhãn `service` ở tất cả các dòng khác trong bảng thành **`service_name`** (định dạng `snake_case`).
 
 ---
 

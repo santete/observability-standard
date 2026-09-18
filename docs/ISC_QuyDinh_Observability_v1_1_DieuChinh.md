@@ -62,57 +62,35 @@ Quy định này xác lập các yêu cầu bắt buộc về logging, tracing v
 
 ## 4. QUY ĐỊNH VỀ LOGGING
 
-### 4.1. Cấu trúc bản ghi log chuẩn (OTLP Log Model từ SDK)
-Mẫu tin log xuất ra phải tuân thủ định dạng JSON có cấu trúc (Structured JSON) theo quy chuẩn `R-OBS-FIELD-001` và `R-RESP-FIELD-001`. Cấu trúc thực tế từ SDK bao gồm 3 nhóm thông tin:
+### 4.1. Cấu trúc bản ghi log
+Mẫu tin log xuất ra từ ứng dụng phải tuân thủ định dạng JSON có cấu trúc (Structured JSON). Cấu trúc bản ghi log bao gồm các trường bắt buộc sau:
 
 ```json
 {
-  /* --- [NHÓM 1] CÁC TRƯỜNG MỨC GIAO THỨC (BẮT BUỘC) --- */
   "timestamp": "2026-09-18T06:40:00.123Z",
-  "severity_text": "Information",                       // Mức log: Information | Warning | Error
-  "severity_number": 9,
-  "body": "Xử lý thanh toán đơn hàng ORD-10422 thành công",
-  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",      // [BẮT BUỘC] W3C Trace ID
-  "span_id": "00f067aa0ba902b7",                        // [BẮT BUỘC] W3C Span ID
-
-  /* --- [NHÓM 2] ĐỊNH DANH DỊCH VỤ (RESOURCE ATTRIBUTES - BẮT BUỘC) --- */
-  "resource": {
-    "service.name": "payment-svc",                      // [BẮT BUỘC] Tên service: kebab-case + "-svc" (R-SVC-001)
-    "service.version": "1.4.2",                         // [BẮT BUỘC] Phiên bản app / Git SHA
-    "deployment.environment": "production"              // [BẮT BUỘC] Môi trường: production | staging | dev
-  },
-
-  /* --- [NHÓM 3] CÁC THUỘC TÍNH CHI TIẾT (ATTRIBUTES) --- */
-  "attributes": {
-    // 1. Trường hệ thống [BẮT BUỘC - SDK TỰ ĐỘNG GẮN]:
-    "service_name": "payment-svc",                      // [BẮT BUỘC] snake_case (R-OBS-FIELD-001)
-    "environment": "production",                        // [BẮT BUỘC] snake_case (R-OBS-FIELD-001)
-    "application_version": "1.4.2",                     // [BẮT BUỘC]
-    "machine_name": "pod-payment-svc-78f94c8b-2x9la",   // Tên Pod K8s / Server Hostname
-    "thread_id": 24,                                    // ID luồng thực thi .NET
-    "correlation_id": "req-9b1deb4d-3b7d-4bad-9bdd",    // [BẮT BUỘC] Mã liên kết luồng nghiệp vụ
-    "request_id": "req-9b1deb4d-3b7d-4bad-9bdd",        // [BẮT BUỘC] Mã đối soát API meta
-    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-    "span_id": "00f067aa0ba902b7",
-
-    // 2. Thuộc tính HTTP Request [SDK TỰ ĐỘNG GẮN TRONG MIDDLEWARE]:
-    "request_host": "api.domain.com",
-    "request_path": "/v1/payments/process",
-    "user_agent": "Mozilla/5.0...",
-
-    // 3. Thuộc tính nghiệp vụ [BẮT BUỘC DÙNG snake_case DO DEV GHI]:
-    "order_id": "ORD-10422",
-    "payment_method": "qr_code",
-    "amount": 150000.0,
-
-    // 4. Thuộc tính nhạy cảm [SDK TỰ ĐỘNG MASKING CHE MỜ PII]:
-    "customer_email": "a***@fpt.com",
-    "customer_phone": "090*****89"
-  }
+  "level": "INFO",
+  "service_name": "payment-svc",
+  "environment": "production",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
+  "correlation_id": "req-9b1deb4d-3b7d-4bad-9bdd",
+  "message": "Payment authorized"
 }
 ```
 
-> **BLOCKER:** Thiếu `trace_id`, `service_name` hoặc `severity_text` (level) — log không dùng được để điều tra sự cố cross-service. Cố tình ghi đè hoặc vô hiệu hóa các trường này sẽ bị từ chối phê duyệt Merge Request.
+> **BLOCKER:** Thiếu `trace_id`, `service_name` hoặc `level` — log không dùng được để điều tra sự cố. Cố tình ghi đè hoặc vô hiệu hóa các trường này sẽ bị từ chối phê duyệt Merge Request / Quality Gate 2.
+
+**Các trường bắt buộc trong bản ghi log:**
+| Tên trường | Tính bắt buộc | Ý nghĩa |
+|---|---|---|
+| `timestamp` | Bắt buộc | Thời gian ghi nhận sự kiện theo chuẩn ISO 8601 UTC. |
+| `level` | Bắt buộc | Mức độ nghiêm trọng của log (`INFO`, `WARN`, `ERROR`). |
+| `service_name` | Bắt buộc | Tên microservice (định dạng `kebab-case` kèm hậu tố `-svc`). |
+| `environment` | Bắt buộc | Môi trường triển khai (`production`, `staging`, `dev`). |
+| `trace_id` | Bắt buộc | Mã định danh truy vết phân tán xuyên suốt các service. |
+| `span_id` | Bắt buộc | Mã định danh công đoạn thực thi hiện tại. |
+| `correlation_id` | Bắt buộc | Mã đối soát request từ Client/Gateway gửi vào. |
+| `message` | Bắt buộc | Nội dung thông điệp mô tả sự kiện. |
 
 ### 4.2. Các điểm bắt buộc ghi log
 | Điểm | Level | Field thêm bắt buộc (`snake_case`) |
