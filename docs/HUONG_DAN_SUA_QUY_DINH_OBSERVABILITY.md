@@ -66,10 +66,12 @@
 
   > **4.1 Cấu trúc bản ghi log**
   >
+  > Toàn bộ log xuất ra từ ứng dụng phải tuân thủ định dạng JSON có cấu trúc. Cấu trúc bản ghi log bắt buộc phải có đầy đủ các trường thực tế do SDK xuất ra như sau:
+  >
   > ```json
   > {
   >   "timestamp": "2026-09-18T06:40:00.123Z",
-  >   "level": "INFO",
+  >   "severity_text": "Information",
   >   "service_name": "payment-svc",
   >   "environment": "production",
   >   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
@@ -79,13 +81,13 @@
   > }
   > ```
   >
-  > **BLOCKER:** Thiếu `trace_id`, `service_name` hoặc `level` — log không dùng được để điều tra sự cố.
+  > **BLOCKER:** Thiếu `trace_id`, `service_name` hoặc `severity_text` — log không dùng được để điều tra sự cố. Cố tình ghi đè hoặc vô hiệu hóa các trường này sẽ bị từ chối phê duyệt Merge Request / Quality Gate 2.
   >
   > **Các trường bắt buộc trong bản ghi log:**
   > | Tên trường | Tính bắt buộc | Ý nghĩa |
   > |---|---|---|
   > | `timestamp` | Bắt buộc | Thời gian ghi nhận sự kiện theo chuẩn ISO 8601 UTC. |
-  > | `level` | Bắt buộc | Mức độ nghiêm trọng của log (`INFO`, `WARN`, `ERROR`). |
+  > | `severity_text` | Bắt buộc | Mức độ nghiêm trọng của log theo chuẩn OTLP (`Information`, `Warning`, `Error`). |
   > | `service_name` | Bắt buộc | Tên microservice (định dạng `kebab-case` kèm hậu tố `-svc`). |
   > | `environment` | Bắt buộc | Môi trường triển khai (`production`, `staging`, `dev`). |
   > | `trace_id` | Bắt buộc | Mã định danh truy vết phân tán xuyên suốt các service. |
