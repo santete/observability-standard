@@ -4,7 +4,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+using System.Globalization;
 using System.Reflection;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -33,8 +36,6 @@ namespace ISC.Observability.Extensions
                               ?? "1.0.0";
             var serviceVersion = builder.Configuration["ServiceVersion"] ?? Environment.GetEnvironmentVariable("APP_VERSION") ?? autoVersion;
             
-            var otlpGrpcEndpoint = builder.Configuration["Otel:OtlpEndpoint"] ?? "http://localhost:4317";
-            var otlpHttpEndpoint = builder.Configuration["Otel:OtlpHttpEndpoint"] ?? "http://localhost:4318";
             var environment = builder.Environment.EnvironmentName;
 
             // Đọc cấu hình Feature Flags
@@ -43,7 +44,30 @@ namespace ISC.Observability.Extensions
             var enableQuartz = builder.Configuration.GetValue<bool>("Otel:EnableQuartz", false);
             var enableMongo = builder.Configuration.GetValue<bool>("Otel:EnableMongo", false);
             var enableMassTransit = builder.Configuration.GetValue<bool>("Otel:EnableMassTransit", false);
+            // Lỗi 7: EF Core giờ thật sự đọc feature flag (trước đây bật vô điều kiện, README nói dối).
+            var enableEntityFramework = builder.Configuration.GetValue<bool>("Otel:EnableEntityFramework", true);
 
+            // Lỗi 3: chọn protocol. Mặc định http vì hạ tầng ISC chỉ mở OTLP/HTTP cổng 80.
+            var protocolStr = builder.Configuration["Otel:Protocol"] ?? "http";
+            var useHttp = protocolStr.Equals("http", StringComparison.OrdinalIgnoreCase);
+
+            // Lỗi 6: cho lọc ActivitySource thay vì AddSource("*") vô điều kiện.
+            var customSourcesRaw = builder.Configuration["Otel:CustomSources"];
+
+            // Lỗi 8: chọn sampler.
+            var samplerStr = builder.Configuration["Otel:TracesSampler"];
+
+            // Ingestion key (tuỳ chọn, dùng làm header auth cho exporter nếu khác rỗng).
+            var ingestionKey = builder.Configuration["OpenTelemetry:IngestionKey"];
+
+            // Giải quyết endpoint cho từng signal.
+            // Ưu tiên 1: OpenTelemetry:<Signal> — full URL đã kèm path (vd http://host/v1/traces).
+            //            Khi đó SDK KHÔNG hardcode path → OTel đổi keyword (/v2/traces...) vẫn dùng được.
+            // Ưu tiên 2 (fallback, protocol=http): Otel:OtlpHttpEndpoint + "/v1/<signal>".
+            // Ưu tiên 3 (fallback, protocol=grpc): Otel:OtlpEndpoint (base, gRPC tự nối path).
+            var (tracesEndpoint, tracesHttp) = ResolveOtlpEndpoint(builder.Configuration, "OpenTelemetry:Tracing", "v1/traces", useHttp);
+            var (metricsEndpoint, metricsHttp) = ResolveOtlpEndpoint(builder.Configuration, "OpenTelemetry:Metrics", "v1/metrics", useHttp);
+            var (logsEndpoint, _) = ResolveOtlpEndpoint(builder.Configuration, "OpenTelemetry:Logs", "v1/logs", useHttp);
 
 
             // ==========================================
@@ -98,10 +122,10 @@ namespace ISC.Observability.Extensions
                 }
             }
 
-            // OpenTelemetry Sink: Luôn bắn log qua OTLP về OTel Collector
+            // OpenTelemetry Sink: Luôn bắn log qua OTLP về OTel Collector (HTTP).
             logConfig.WriteTo.OpenTelemetry(options =>
             {
-                options.Endpoint = $"{otlpHttpEndpoint}/v1/logs";
+                options.Endpoint = logsEndpoint;        // full URL đã kèm path /v1/logs
                 options.Protocol = OtlpProtocol.HttpProtobuf;
                 options.ResourceAttributes = new Dictionary<string, object>
                 {
@@ -109,6 +133,8 @@ namespace ISC.Observability.Extensions
                     ["service.version"] = serviceVersion,
                     ["deployment.environment"] = environment
                 };
+                if (!string.IsNullOrWhiteSpace(ingestionKey))
+                    options.Headers = new Dictionary<string, string> { ["Authorization"] = $"Bearer {ingestionKey}" };
             });
 
             // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
@@ -138,6 +164,11 @@ namespace ISC.Observability.Extensions
             // This fixes the no-op bug where metrics were lost because Add() was called before Build().
             builder.Services.AddHostedService<ComplianceMetricsService>();
 
+            // Lỗi 5: self-diagnostics — exporter không còn "chết câm".
+            // EventListener này lắng nghe EventSource của OTel exporter và log Warning ra Serilog
+            // mỗi khi export thất bại. Phải tạo sớm (trước Build) để kịp subscribe EventSource.
+            OtlpExporterDiagnostics.Start();
+
             // Configure Propagators (W3C + B3 for Istio/Envoy mesh compatibility)
             OpenTelemetry.Sdk.SetDefaultTextMapPropagator(new OpenTelemetry.Context.Propagation.CompositeTextMapPropagator(new OpenTelemetry.Context.Propagation.TextMapPropagator[]
             {
@@ -161,6 +192,9 @@ namespace ISC.Observability.Extensions
                 {
                     tracing
                         .SetResourceBuilder(resourceBuilder)
+                        // Lỗi 8: sampler cấu hình được; mặc định AlwaysOn để APM xuất hiện ngay
+                        // kể cả khi ingress gắn traceparent sampled=00.
+                        .SetSampler(ParseSampler(samplerStr))
                         .AddAspNetCoreInstrumentation(options =>
                         {
                             options.RecordException = true;
@@ -169,8 +203,11 @@ namespace ISC.Observability.Extensions
                         .AddSqlClientInstrumentation(options =>
                         {
                             options.RecordException = true;
-                        })
-                        .AddEntityFrameworkCoreInstrumentation();
+                        });
+
+                    // Lỗi 7: EF Core chỉ bật khi feature flag = true (mặc định true).
+                    if (enableEntityFramework)
+                        tracing.AddEntityFrameworkCoreInstrumentation();
 
                     // Cấu hình linh hoạt qua Feature Flags
                     if (enableRedis) tracing.AddRedisInstrumentation();
@@ -179,13 +216,29 @@ namespace ISC.Observability.Extensions
                     if (enableMongo) tracing.AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources");
                     if (enableMassTransit) tracing.AddSource("MassTransit");
 
-                    tracing
-                        .AddSource(serviceName)
-                        .AddSource("*") // Wildcard: Capture all custom ActivitySources created by Devs
-                        .AddOtlpExporter(opt =>
-                        {
-                            opt.Endpoint = new Uri(otlpGrpcEndpoint);
-                        });
+                    tracing.AddSource(serviceName);
+
+                    // Lỗi 6: cho khai danh sách source qua Otel:CustomSources;
+                    // chỉ dùng wildcard "*" khi không cấu hình (giữ mặc định cũ).
+                    if (!string.IsNullOrWhiteSpace(customSourcesRaw))
+                    {
+                        foreach (var src in customSourcesRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                            tracing.AddSource(src);
+                    }
+                    else
+                    {
+                        tracing.AddSource("*"); // Wildcard: Capture all custom ActivitySources created by Devs
+                    }
+
+                    // Lỗi 1 & 4: traces đặt Protocol tường minh + dùng endpoint đã kèm path khi HTTP.
+                    // Lỗi bẫy options name: dùng name riêng "otlp-traces" để delegate không bị metrics ghi đè.
+                    tracing.AddOtlpExporter(name: "otlp-traces", opt =>
+                    {
+                        opt.Endpoint = new Uri(tracesEndpoint);
+                        opt.Protocol = tracesHttp ? OtlpExportProtocol.HttpProtobuf : OtlpExportProtocol.Grpc;
+                        if (!string.IsNullOrWhiteSpace(ingestionKey))
+                            opt.Headers = $"Authorization=Bearer {ingestionKey}";
+                    });
                 })
                 .WithMetrics(metrics =>
                 {
@@ -195,14 +248,75 @@ namespace ISC.Observability.Extensions
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()
                         .AddMeter(serviceName)
-                        .AddMeter("ISC.Observability.Compliance") // QA Compliance Meter
-                        .AddOtlpExporter(opt =>
-                        {
-                            opt.Endpoint = new Uri(otlpGrpcEndpoint);
-                        });
+                        .AddMeter("ISC.Observability.Compliance"); // QA Compliance Meter
+
+                    // Lỗi 2 & 4: metrics đặt Protocol tường minh + dùng endpoint đã kèm path khi HTTP.
+                    // Bẫy options name: name riêng "otlp-metrics" — cùng name thì delegate sau ghi đè endpoint trước.
+                    metrics.AddOtlpExporter(name: "otlp-metrics", opt =>
+                    {
+                        opt.Endpoint = new Uri(metricsEndpoint);
+                        opt.Protocol = metricsHttp ? OtlpExportProtocol.HttpProtobuf : OtlpExportProtocol.Grpc;
+                        if (!string.IsNullOrWhiteSpace(ingestionKey))
+                            opt.Headers = $"Authorization=Bearer {ingestionKey}";
+                    });
                 });
 
             return builder;
+        }
+
+        /// <summary>
+        /// Giải quyết endpoint OTLP cho một signal, theo thứ tự ưu tiên:
+        /// 1) <paramref name="fullEndpointKey"/> (vd "OpenTelemetry:Tracing") — full URL đã kèm path.
+        ///    Khi dùng full URL, protocol = HttpProtobuf (đây là HTTP URL có path).
+        ///    KHÔNG hardcode path → OTel đổi keyword (/v2/traces...) vẫn dùng được.
+        /// 2) Otel:OtlpHttpEndpoint + "/{signalPath}" khi protocol = http (fallback, backward-compat).
+        /// 3) Otel:OtlpEndpoint (base gRPC, gRPC tự nối path) khi protocol = grpc.
+        /// Trả về (endpoint URL string, isHttp).
+        /// </summary>
+        private static (string endpoint, bool isHttp) ResolveOtlpEndpoint(IConfiguration config, string fullEndpointKey, string signalPath, bool useHttp)
+        {
+            // Ưu tiên 1: full endpoint từng signal (schema mới OpenTelemetry:*).
+            var full = config[fullEndpointKey];
+            if (!string.IsNullOrWhiteSpace(full))
+                return (full!.TrimEnd('/'), true); // full HTTP URL đã kèm path → HttpProtobuf
+
+            // Fallback theo protocol.
+            if (useHttp)
+            {
+                var httpBase = config["Otel:OtlpHttpEndpoint"] ?? "http://localhost:4318";
+                return ($"{httpBase.TrimEnd('/')}/{signalPath}", true);
+            }
+            else
+            {
+                var grpcBase = config["Otel:OtlpEndpoint"] ?? "http://localhost:4317";
+                return (grpcBase, false); // gRPC: OTel tự nối /<signal> (vì base không có path)
+            }
+        }
+
+        /// <summary>
+        /// Lỗi 8: parse sampler từ cấu hình Otel:TracesSampler.
+        /// Giá trị: always_on | always_off | parentbased | <tỉ lệ 0..1>
+        /// Mặc định (không khai) = AlwaysOnSampler để APM xuất hiện ngay cả khi ingress
+        /// gắn traceparent cờ sampled=00 (tránh ParentBased bỏ span).
+        /// </summary>
+        private static Sampler ParseSampler(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return new AlwaysOnSampler();
+
+            var v = value.Trim();
+            if (v.Equals("always_on", StringComparison.OrdinalIgnoreCase))
+                return new AlwaysOnSampler();
+            if (v.Equals("always_off", StringComparison.OrdinalIgnoreCase))
+                return new AlwaysOffSampler();
+            if (v.StartsWith("parentbased", StringComparison.OrdinalIgnoreCase))
+                return new ParentBasedSampler(new AlwaysOnSampler());
+            // Dạng số → TraceIdRatioBasedSampler (0.0 .. 1.0)
+            if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var ratio))
+                return new TraceIdRatioBasedSampler(Math.Clamp(ratio, 0.0, 1.0));
+
+            // Giá trị không nhận dạng được → mặc định an toàn.
+            return new AlwaysOnSampler();
         }
 
         public static IApplicationBuilder UseStandardObservability(this IApplicationBuilder app)
@@ -229,7 +343,7 @@ namespace ISC.Observability.Extensions
                 options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
                 {
                     diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-                    diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"]!.ToString());
+                    diagnosticContext.Set("UserAgent", httpContext.Request.Headers["UserAgent"]!.ToString());
                 };
             });
 

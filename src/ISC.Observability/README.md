@@ -72,6 +72,40 @@ app.Run();
 
 Bạn không cần can thiệp vào code để kích hoạt các tính năng theo dõi database hay redis. Chỉ cần cấu hình file `appsettings.json` (hoặc Environment Variables). Mặc định nếu không cấu hình, các instrument bên ngoài (Redis, Mongo, Kafka...) sẽ tắt để tiết kiệm tài nguyên.
 
+#### Cấu hình OTLP Endpoint (2 cách)
+
+**Cách A — Endpoint đầy đủ từng signal (khuyến nghị, khớp hạ tầng ISC cổng 80):**
+
+Mỗi signal khai URL đầy đủ đã kèm path. SDK dùng nguyên URL này, **không tự nối path** — nên khi OTel đổi keyword (vd `/v2/traces`) bạn chỉ cần sửa config, không phụ thuộc SDK.
+
+```json
+{
+  "ServiceName": "Payment.Service",
+  "ServiceVersion": "1.2.0",
+  "OpenTelemetry": {
+    "Logs":      "http://signoz-otel.fpt.net/v1/logs",
+    "Tracing":   "http://signoz-otel.fpt.net/v1/traces",
+    "Metrics":   "http://signoz-otel.fpt.net/v1/metrics",
+    "IngestionKey": ""
+  },
+  "Otel": {
+    "Protocol": "http",
+    "EnableRedis": true,
+    "EnableMongo": true,
+    "EnableMassTransit": true,
+    "EnableGrpc": false,
+    "EnableQuartz": false,
+    "EnableEntityFramework": true,
+    "TracesSampler": "always_on",
+    "CustomSources": "Payment.Service,Payment.Worker"
+  }
+}
+```
+
+**Cách B — Base endpoint + SDK tự nối path (backward-compat với v1.3.x):**
+
+Khi không khai `OpenTelemetry:*`, SDK dùng `Otel:OtlpHttpEndpoint` (HTTP) hoặc `Otel:OtlpEndpoint` (gRPC) làm base và tự nối `/v1/<signal>`.
+
 ```json
 {
   "ServiceName": "Payment.Service",
@@ -79,15 +113,36 @@ Bạn không cần can thiệp vào code để kích hoạt các tính năng the
   "Otel": {
     "OtlpEndpoint": "http://otel-collector:4317",
     "OtlpHttpEndpoint": "http://otel-collector:4318",
-    "EnableRedis": true,          // Bật auto-trace cho Redis
-    "EnableMongo": true,          // Bật auto-trace cho MongoDB
-    "EnableMassTransit": true,    // Bật auto-trace cho Message Brokers (Kafka, RabbitMQ) qua MassTransit
-    "EnableGrpc": false,          // Bật/tắt gRPC
-    "EnableQuartz": false,        // Bật/tắt theo dõi Job của Quartz.NET
-    "EnableEntityFramework": true // Bật auto-trace truy vấn SQL (EF Core)
+    "Protocol": "http",
+    "EnableRedis": true,
+    "EnableMongo": true,
+    "EnableMassTransit": true,
+    "EnableGrpc": false,
+    "EnableQuartz": false,
+    "EnableEntityFramework": true,
+    "TracesSampler": "always_on",
+    "CustomSources": "Payment.Service,Payment.Worker"
   }
 }
 ```
+
+#### Bảng tham chiếu các khoá cấu hình
+
+| Khoá | Mặc định | Mô tả |
+|---|---|---|
+| `Otel:Protocol` | `http` | Chọn `http` hoặc `grpc`. Mặc định `http` vì hạ tầng ISC chỉ mở OTLP/HTTP cổng 80. |
+| `OpenTelemetry:Logs` / `Tracing` / `Metrics` | — | URL đầy đủ từng signal (đã kèm `/v1/...`). Ưu tiên cao nhất; SDK không tự nối path. |
+| `Otel:OtlpEndpoint` | `http://localhost:4317` | Base gRPC (fallback khi `Protocol=grpc`). |
+| `Otel:OtlpHttpEndpoint` | `http://localhost:4318` | Base HTTP (fallback khi `Protocol=http`); SDK tự nối `/v1/<signal>`. |
+| `OpenTelemetry:IngestionKey` | — | Tuỳ chọn, gửi làm header `Authorization: Bearer ...` cho exporter. |
+| `Otel:TracesSampler` | `always_on` | `always_on` \| `always_off` \| `parentbased` \| `<tỉ lệ 0..1>`. Mặc định `always_on` để APM xuất hiện dù ingress gắn traceparent sampled=00. |
+| `Otel:CustomSources` | — | Danh sách `ActivitySource` (phân tách dấu phẩy). Khi để trống → SDK dùng wildcard `*` (bắt tất cả). |
+| `Otel:EnableEntityFramework` | `true` | Bật/tắt EF Core instrumentation (thật sự đọc được kể từ v1.4.0). |
+| `Otel:EnableRedis` | `false` | Bật auto-trace cho Redis |
+| `Otel:EnableMongo` | `false` | Bật auto-trace cho MongoDB |
+| `Otel:EnableMassTransit` | `false` | Bật auto-trace cho Message Brokers (Kafka, RabbitMQ) qua MassTransit |
+| `Otel:EnableGrpc` | `false` | Bật/tắt gRPC client instrumentation |
+| `Otel:EnableQuartz` | `false` | Bật/tắt theo dõi Job của Quartz.NET |
 
 ### 3. Ghi Log Nghiệp Vụ (Business Logging)
 
@@ -177,12 +232,115 @@ app.Run();
 > [!TIP]
 > Nếu bạn **KHÔNG** gọi `.SuppressRequestLogging()` trên bất kỳ endpoint nào, SDK sẽ log tất cả request ở mức `Information` bình thường. Không có magic, không có filter ngầm nào cả.
 
-#### Thắt chặt Console Log ở Production (Explicit Configuration)
-Mặc định, Console Sink luôn hiển thị log ở mức `Information`. Nếu bạn muốn tiết kiệm I/O trên server Production, bạn **BẮT BUỘC** phải tự khai báo cấu hình thắt chặt này một cách tường minh vào file `appsettings.Production.json` (hoặc `appsettings.Live.json` tùy cách dự án đặt tên môi trường):
+#### Console Sink — Tự động điều chỉnh theo môi trường (Từ v1.2.0)
+
+> [!IMPORTANT]
+> **Breaking Change từ v1.2.0:** Console Sink không còn bật mặc định ở mọi môi trường. Hành vi mới giúp giảm nhiễu log cho Dev và tiết kiệm I/O cho Production.
+
+SDK tự động detect môi trường và điều chỉnh Console Sink cho phù hợp:
+
+| Môi trường | Console Sink | Format | Lý do |
+|---|---|---|---|
+| `Development` / `Local` | ✅ **Bật mặc định** | Plain text (đọc được) | Dev cần xem log trực tiếp trên terminal |
+| `Production` / `Staging` / Khác | ❌ **Tắt mặc định** | — | Đã có OTel Sink bắn log về Kibana, console thừa |
+
+##### Sơ đồ 1: Development / Local — Console Sink BẬT
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     Application Code                         │
+│                                                              │
+│  Console.WriteLine("debug xyz")     ILogger<T>.LogInfo(...)  │
+│         │                                    │               │
+└─────────┼────────────────────────────────────┼───────────────┘
+          │                                    │
+          │                             ┌──────▼──────────┐
+          │                             │  Serilog Engine  │
+          │                             │  (Enrich: Trace, │
+          │                             │  PII Masking...) │
+          │                             └──┬──────────┬────┘
+          │                                │          │
+          │                   ┌────────────▼──┐  ┌────▼──────────────┐
+          │                   │ ✅ Console     │  │ ✅ OTel Sink       │
+          │                   │ Sink (Plain)   │  │ (HTTP Protobuf)   │
+          │                   └────────┬───────┘  └────────┬──────────┘
+          │                            │                   │
+          ▼                            ▼                   ▼
+   ┌─────────────────────────────┐              ┌──────────────────┐
+   │    stdout / Terminal        │              │   OTel Collector  │
+   │  (trộn lẫn cả 2 loại log)  │              │   → Kibana        │
+   └─────────────────────────────┘              └──────────────────┘
+```
+
+> Dev nhìn terminal thấy **cả 2 loại** trộn lẫn: log của Serilog (plain text) + `Console.WriteLine()` của chính mình. Chấp nhận được vì đang develop.
+
+##### Sơ đồ 2: Production / Staging — Console Sink TẮT
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     Application Code                         │
+│                                                              │
+│  Console.WriteLine("debug xyz")     ILogger<T>.LogInfo(...)  │
+│         │                                    │               │
+└─────────┼────────────────────────────────────┼───────────────┘
+          │                                    │
+          │                             ┌──────▼──────────┐
+          │                             │  Serilog Engine  │
+          │                             │  (Enrich: Trace, │
+          │                             │  PII Masking...) │
+          │                             └──┬──────────┬────┘
+          │                                │          │
+          │                   ┌ ─ ─ ─ ─ ─ ▼─ ┐  ┌────▼──────────────┐
+          │                     ❌ Console          │ ✅ OTel Sink       │
+          │                   │ Sink (TẮT)    │  │ (HTTP Protobuf)   │
+          │                    ─ ─ ─ ─ ─ ─ ─ ─   └────────┬──────────┘
+          │                                                │
+          ▼                                                ▼
+   ┌─────────────────────────────┐              ┌──────────────────┐
+   │    stdout / Terminal        │              │   OTel Collector  │
+   │  (sạch, chỉ Console.Write) │              │   → Kibana        │
+   └─────────────────────────────┘              └──────────────────┘
+```
+
+> **stdout sạch:** Chỉ còn `Console.WriteLine()` của Dev (nếu có). Log nghiệp vụ qua `ILogger<T>` đi thẳng OTel Sink → Kibana. Không bị trộn lẫn, không tốn I/O ghi double.
+
+**Ví dụ log ở Development (plain text):**
+```
+[19:11:38 INF] Standard Observability SDK initialized for "sr-owner-api" with Environment "Local". [Compliance=True]
+[19:11:39 INF] Bắt đầu xử lý đơn hàng ORD-001 cho user n***@g***.com
+```
+
+**Override hành vi mặc định** qua `appsettings.json`:
+
 ```json
-"Serilog": {
-  "Console": {
-    "RestrictedToMinimumLevel": "Warning"
+// Bật Console Sink ở Production (opt-in cho container log scraping)
+{
+  "Serilog": {
+    "Console": {
+      "Enabled": true
+    }
+  }
+}
+```
+
+```json
+// Tắt Console Sink ở Development (nếu Dev không cần)
+{
+  "Serilog": {
+    "Console": {
+      "Enabled": false
+    }
+  }
+}
+```
+
+**Điều chỉnh mức log tối thiểu trên Console** (áp dụng khi Console Sink đang bật):
+```json
+{
+  "Serilog": {
+    "Console": {
+      "RestrictedToMinimumLevel": "Warning"
+    }
   }
 }
 ```

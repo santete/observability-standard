@@ -18,7 +18,9 @@ namespace ISC.Observability.Telemetry
 
         public ComplianceMetricsService(IConfiguration configuration, IHostEnvironment hostEnvironment)
         {
-            _serviceName = configuration["ServiceName"] ?? "unknown";
+            _serviceName = configuration["ISC:Observability:ResolvedServiceName"]
+                        ?? configuration["ServiceName"]
+                        ?? "unknown";
             _environment = hostEnvironment.EnvironmentName;
 
             _meter = new Meter("ISC.Observability.Compliance");

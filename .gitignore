@@ -1,7 +1,11 @@
 # Build artifacts
-src/**/bin/
-src/**/obj/
+**/bin/
+**/obj/
+[Bb]in/
+[Oo]bj/
 *.nupkg
+BenchmarkDotNet.Artifacts/
+**/BenchmarkDotNet.Artifacts/
 
 # Temp/scratch files
 scratch/
@@ -9,6 +13,20 @@ original_panels_str.txt
 rebuilt_panels_str.txt
 temp_original_panels.json
 sample_lens.json
+
+# IDE / Editor files
+.vs/
+*.user
+*.suo
+
+# Sensitive / Keys / Secrets / Internal Audit
+nuget_keys.txt
+*key*.txt
+*.secret
+*.env
+*.env.*
+*.pdf
+src/sdk-issue.md
 
 # Python cache
 __pycache__/
