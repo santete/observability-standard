@@ -60,19 +60,7 @@ Dưới đây là cấu trúc mẫu tin JSON thực tế đầy đủ nhất đ�
 
     // --- [3.4] TỰ ĐỘNG CHE MỜ DỮ LIỆU NHẠY CẢM (PII Masking Enricher) ---
     "customer_email": "a***@fpt.com",                   // Email đã được mask tự động
-    "customer_phone": "090*****89",                     // Số điện thoại đã được mask tự động
-
-    // --- [3.5] ALIAS TƯƠNG THÍCH NGƯỢC (SDK tự động đính kèm để bảo vệ Dashboard cũ) ---
-    "ServiceName": "payment-svc",
-    "Environment": "production",
-    "ApplicationVersion": "1.4.2",
-    "MachineName": "pod-payment-svc-78f94c8b-2x9la",
-    "ThreadId": 24,
-    "CorrelationId": "req-9b1deb4d-3b7d-4bad-9bdd",
-    "TraceId": "4bf92f3577b34da6a3ce929d0e0e4736",
-    "SpanId": "00f067aa0ba902b7",
-    "RequestHost": "api.domain.com",
-    "UserAgent": "Mozilla/5.0..."
+    "customer_phone": "090*****89"                      // Số điện thoại đã được mask tự động
   }
 }
 ```

@@ -171,12 +171,10 @@ public class OrdersController : ControllerBase
 ```
 
 > [!TIP]
-> **Quy chuẩn Đặt tên Biến Log (R-OBS-FIELD-001 & R-RESP-FIELD-001):**
-> * **Developer:** Khi đưa tham số nghiệp vụ vào log message template, **bắt buộc dùng `snake_case`** (ví dụ: `{order_id}`, `{customer_name}`, `{total_amount}`). Không dùng PascalCase hoặc camelCase.
-> * **Hệ thống & Tương thích ngược:** Kể từ v1.4.2, SDK tự động xuất song song cả 2 chuẩn:
->   * `snake_case` (Chuẩn mới): `service_name`, `environment`, `application_version`, `machine_name`, `thread_id`, `correlation_id`, `request_id`, `trace_id`, `span_id`, `request_host`, `user_agent`.
->   * `PascalCase` (Tương thích ngược): `ServiceName`, `Environment`, `ApplicationVersion`, `MachineName`, `ThreadId`, `CorrelationId`, `TraceId`, `SpanId`, `RequestHost`, `UserAgent`.
->   * Nhờ đó, các Dashboard và Alert Rules cũ trên Kibana/SigNoz **hoàn toàn không bị ảnh hưởng**, trong khi hệ thống mới đạt được sự nhất quán tuyệt đối.
+> **Quy chuẩn Đặt tên Thuộc tính Log (R-OBS-FIELD-001 & R-RESP-FIELD-001):**
+> * Toàn bộ thuộc tính trong log **đồng nhất 100% bằng `snake_case`**:
+>   * Các trường hệ thống do SDK tự động sinh: `service_name`, `environment`, `application_version`, `machine_name`, `thread_id`, `correlation_id`, `request_id`, `trace_id`, `span_id`, `request_host`, `user_agent`.
+>   * Các trường nghiệp vụ do Developer ghi: Bắt buộc dùng `snake_case` (ví dụ: `{order_id}`, `{customer_name}`, `{total_amount}`). Tuyệt đối không dùng PascalCase hoặc camelCase.
 
 ### 4. Tùy chỉnh Log Level & Lọc Log Rác (Từ v1.0.5)
 

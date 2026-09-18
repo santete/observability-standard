@@ -34,15 +34,11 @@ public class CorrelationIdMiddleware
         var traceId = Activity.Current?.TraceId.ToString() ?? "N/A";
         var spanId = Activity.Current?.SpanId.ToString() ?? "N/A";
 
-        // Push identifiers to Serilog LogContext (SPEC 2.3 & R-OBS-FIELD-001)
-        // Hỗ trợ song song snake_case (chuẩn mới ISC) và PascalCase (giữ tương thích ngược tuyệt đối)
+        // Push identifiers to Serilog LogContext (R-OBS-FIELD-001: 100% snake_case duy nhất)
         using (LogContext.PushProperty("correlation_id", correlationId))
-        using (LogContext.PushProperty("CorrelationId", correlationId))
         using (LogContext.PushProperty("request_id", correlationId))
         using (LogContext.PushProperty("trace_id", traceId))
-        using (LogContext.PushProperty("TraceId", traceId))
         using (LogContext.PushProperty("span_id", spanId))
-        using (LogContext.PushProperty("SpanId", spanId))
         {
             await _next(context);
         }

@@ -111,16 +111,7 @@
   > 
   >     // 4. Thuộc tính nhạy cảm [SDK TỰ ĐỘNG CHE MỜ MASKING PII]:
   >     "customer_email": "a***@fpt.com",
-  >     "customer_phone": "090*****89",
-  > 
-  >     // 5. Alias tương thích ngược [SDK TỰ ĐỘNG GẮN CHO DASHBOARD CŨ]:
-  >     "ServiceName": "payment-svc",
-  >     "Environment": "production",
-  >     "CorrelationId": "req-9b1deb4d-3b7d-4bad-9bdd",
-  >     "TraceId": "4bf92f3577b34da6a3ce929d0e0e4736",
-  >     "SpanId": "00f067aa0ba902b7",
-  >     "RequestHost": "api.domain.com",
-  >     "UserAgent": "Mozilla/5.0..."
+  >     "customer_phone": "090*****89"
   >   }
   > }
   > ```

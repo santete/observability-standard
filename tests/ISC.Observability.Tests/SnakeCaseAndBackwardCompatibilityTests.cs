@@ -10,9 +10,9 @@ using Xunit;
 
 namespace ISC.Observability.Tests;
 
-public class SnakeCaseAndBackwardCompatibilityTests : IDisposable
+public class SnakeCaseStandardLoggingTests : IDisposable
 {
-    public SnakeCaseAndBackwardCompatibilityTests()
+    public SnakeCaseStandardLoggingTests()
     {
         Log.CloseAndFlush();
     }
@@ -29,7 +29,7 @@ public class SnakeCaseAndBackwardCompatibilityTests : IDisposable
     }
 
     [Fact]
-    public void StandardObservability_Enriches_Both_SnakeCase_And_PascalCase_SystemProperties()
+    public void StandardObservability_Enriches_Only_SnakeCase_SystemProperties()
     {
         var testSink = new TestSink();
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -48,7 +48,7 @@ public class SnakeCaseAndBackwardCompatibilityTests : IDisposable
         Assert.NotEmpty(testSink.Events);
         var evt = testSink.Events.Last();
 
-        // 1. Verify snake_case properties exist (R-OBS-FIELD-001)
+        // 1. Verify 100% snake_case properties exist (R-OBS-FIELD-001)
         Assert.True(evt.Properties.ContainsKey("service_name"), "Missing snake_case: service_name");
         Assert.Equal("\"order-svc\"", evt.Properties["service_name"].ToString());
 
@@ -59,20 +59,16 @@ public class SnakeCaseAndBackwardCompatibilityTests : IDisposable
         Assert.True(evt.Properties.ContainsKey("machine_name"), "Missing snake_case: machine_name");
         Assert.True(evt.Properties.ContainsKey("thread_id"), "Missing snake_case: thread_id");
 
-        // 2. Verify PascalCase properties STILL exist (Backward Compatibility)
-        Assert.True(evt.Properties.ContainsKey("ServiceName"), "Missing PascalCase: ServiceName");
-        Assert.Equal("\"order-svc\"", evt.Properties["ServiceName"].ToString());
-
-        Assert.True(evt.Properties.ContainsKey("Environment"), "Missing PascalCase: Environment");
-        Assert.Equal("\"Development\"", evt.Properties["Environment"].ToString());
-
-        Assert.True(evt.Properties.ContainsKey("ApplicationVersion"), "Missing PascalCase: ApplicationVersion");
-        Assert.True(evt.Properties.ContainsKey("MachineName"), "Missing PascalCase: MachineName");
-        Assert.True(evt.Properties.ContainsKey("ThreadId"), "Missing PascalCase: ThreadId");
+        // 2. Verify legacy PascalCase properties are REMOVED (Zero duplicate pollution)
+        Assert.False(evt.Properties.ContainsKey("ServiceName"), "Polluted with PascalCase: ServiceName");
+        Assert.False(evt.Properties.ContainsKey("Environment"), "Polluted with PascalCase: Environment");
+        Assert.False(evt.Properties.ContainsKey("ApplicationVersion"), "Polluted with PascalCase: ApplicationVersion");
+        Assert.False(evt.Properties.ContainsKey("MachineName"), "Polluted with PascalCase: MachineName");
+        Assert.False(evt.Properties.ContainsKey("ThreadId"), "Polluted with PascalCase: ThreadId");
     }
 
     [Fact]
-    public async Task CorrelationIdMiddleware_Pushes_Both_SnakeCase_And_PascalCase_To_LogContext()
+    public async Task CorrelationIdMiddleware_Pushes_Only_SnakeCase_To_LogContext()
     {
         var testSink = new TestSink();
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -100,7 +96,7 @@ public class SnakeCaseAndBackwardCompatibilityTests : IDisposable
         Assert.NotEmpty(testSink.Events);
         var evt = testSink.Events.Last();
 
-        // Verify snake_case
+        // Verify snake_case properties
         Assert.True(evt.Properties.ContainsKey("correlation_id"), "Missing snake_case: correlation_id");
         Assert.Equal("\"test-corr-12345\"", evt.Properties["correlation_id"].ToString());
 
@@ -110,11 +106,9 @@ public class SnakeCaseAndBackwardCompatibilityTests : IDisposable
         Assert.True(evt.Properties.ContainsKey("trace_id"), "Missing snake_case: trace_id");
         Assert.True(evt.Properties.ContainsKey("span_id"), "Missing snake_case: span_id");
 
-        // Verify PascalCase backward compatibility
-        Assert.True(evt.Properties.ContainsKey("CorrelationId"), "Missing PascalCase: CorrelationId");
-        Assert.Equal("\"test-corr-12345\"", evt.Properties["CorrelationId"].ToString());
-
-        Assert.True(evt.Properties.ContainsKey("TraceId"), "Missing PascalCase: TraceId");
-        Assert.True(evt.Properties.ContainsKey("SpanId"), "Missing PascalCase: SpanId");
+        // Verify legacy PascalCase properties are REMOVED (Zero duplicate pollution)
+        Assert.False(evt.Properties.ContainsKey("CorrelationId"), "Polluted with PascalCase: CorrelationId");
+        Assert.False(evt.Properties.ContainsKey("TraceId"), "Polluted with PascalCase: TraceId");
+        Assert.False(evt.Properties.ContainsKey("SpanId"), "Polluted with PascalCase: SpanId");
     }
 }
