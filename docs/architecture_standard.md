@@ -23,8 +23,8 @@ flowchart TB
 
     subgraph Interface["🔄 Standardized Contract (OTLP)"]
         direction LR
-        gRPC["OTLP / gRPC<br>Port 4317<br>(Traces & Metrics)"]
-        HTTP["OTLP / HTTP<br>Port 4318<br>(Logs)"]
+        HTTP["OTLP / HTTP Protobuf<br>Port 4318 / Port 80<br>(Mặc định cho hạ tầng ISC)"]
+        gRPC["OTLP / gRPC<br>Port 4317<br>(Tuỳ chọn mạng nội bộ)"]
     end
 
     subgraph DevOps["☁️ DevOps Domain (Infrastructure Level)"]
@@ -100,7 +100,7 @@ Dựa trên kiến trúc trên, bộ công cụ chuẩn cho dự án được ch
 - **Ngôn ngữ/Framework**: .NET 8 (C#)
 - **Log framework**: Serilog
 - **Tracing/Metrics SDK**: OpenTelemetry .NET
-- **Chuẩn Giao Tiếp**: OTLP (gRPC trên cổng 4317, HTTP trên cổng 4318)
+- **Chuẩn Giao Tiếp**: OTLP (Mặc định HTTP Protobuf trên cổng 4318/80 cho hạ tầng ISC; hỗ trợ gRPC trên cổng 4317)
 - **Data Pipeline/Proxy**: OpenTelemetry Collector (bản `contrib` để có sẵn nhiều Exporter)
 - **Lưu Trữ (Storage)**: Elasticsearch 8.x
 - **Hiển Thị (Visualization)**: Kibana 8.x

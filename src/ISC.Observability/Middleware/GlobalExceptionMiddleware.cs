@@ -5,6 +5,7 @@ using OpenTelemetry.Trace;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Serilog.Context;
 namespace ISC.Observability.Middleware;
 
 /// <summary>
@@ -32,12 +33,16 @@ public class GlobalExceptionMiddleware
         }
         catch (Exception ex)
         {
-            // SPEC 2.3: Log ERROR with full Exception object, not just Message
-            _logger.LogError(ex,
-                "Unhandled exception occurred. RequestPath: {RequestPath}, Method: {RequestMethod}, TraceId: {TraceId}",
-                context.Request.Path,
-                context.Request.Method,
-                Activity.Current?.TraceId.ToString() ?? "N/A");
+            // SPEC 2.3 & R-OBS-FIELD-001: Log ERROR with full Exception object and both snake_case and PascalCase properties
+            using (LogContext.PushProperty("request_path", context.Request.Path.Value))
+            using (LogContext.PushProperty("request_method", context.Request.Method))
+            {
+                _logger.LogError(ex,
+                    "Unhandled exception occurred. RequestPath: {RequestPath}, Method: {RequestMethod}, TraceId: {TraceId}",
+                    context.Request.Path,
+                    context.Request.Method,
+                    Activity.Current?.TraceId.ToString() ?? "N/A");
+            }
 
             // Mark current Activity/Span as Error (SPEC 4.2)
             var activity = Activity.Current;

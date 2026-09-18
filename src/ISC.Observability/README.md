@@ -161,14 +161,22 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public IActionResult CreateOrder([FromBody] Order order)
     {
-        // Ghi log bình thường, tự động được đính kèm TraceId hiện tại!
-        _logger.LogInformation("Bắt đầu xử lý đơn hàng {OrderId} cho user {UserEmail}", order.Id, order.Email);
+        // Ghi log chuẩn ISC (R-OBS-FIELD-001): Tham số nghiệp vụ BẮT BUỘC dùng snake_case
+        _logger.LogInformation("Bắt đầu xử lý đơn hàng {order_id} cho user {customer_email}", order.Id, order.Email);
         
         // Trình Masking PII của SDK sẽ tự động che mờ Email thành "n***@g***.com" trong log text.
         return Ok();
     }
 }
 ```
+
+> [!TIP]
+> **Quy chuẩn Đặt tên Biến Log (R-OBS-FIELD-001 & R-RESP-FIELD-001):**
+> * **Developer:** Khi đưa tham số nghiệp vụ vào log message template, **bắt buộc dùng `snake_case`** (ví dụ: `{order_id}`, `{customer_name}`, `{total_amount}`). Không dùng PascalCase hoặc camelCase.
+> * **Hệ thống & Tương thích ngược:** Kể từ v1.4.2, SDK tự động xuất song song cả 2 chuẩn:
+>   * `snake_case` (Chuẩn mới): `service_name`, `environment`, `application_version`, `machine_name`, `thread_id`, `correlation_id`, `request_id`, `trace_id`, `span_id`, `request_host`, `user_agent`.
+>   * `PascalCase` (Tương thích ngược): `ServiceName`, `Environment`, `ApplicationVersion`, `MachineName`, `ThreadId`, `CorrelationId`, `TraceId`, `SpanId`, `RequestHost`, `UserAgent`.
+>   * Nhờ đó, các Dashboard và Alert Rules cũ trên Kibana/SigNoz **hoàn toàn không bị ảnh hưởng**, trong khi hệ thống mới đạt được sự nhất quán tuyệt đối.
 
 ### 4. Tùy chỉnh Log Level & Lọc Log Rác (Từ v1.0.5)
 

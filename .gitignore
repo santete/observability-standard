@@ -13,6 +13,7 @@ original_panels_str.txt
 rebuilt_panels_str.txt
 temp_original_panels.json
 sample_lens.json
+*.zip
 
 # IDE / Editor files
 .vs/

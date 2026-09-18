@@ -31,10 +31,18 @@ public class CorrelationIdMiddleware
         // Set response header for downstream tracing
         context.Response.Headers[CorrelationIdHeader] = correlationId;
 
-        // Push identifiers to Serilog LogContext (SPEC 2.3)
+        var traceId = Activity.Current?.TraceId.ToString() ?? "N/A";
+        var spanId = Activity.Current?.SpanId.ToString() ?? "N/A";
+
+        // Push identifiers to Serilog LogContext (SPEC 2.3 & R-OBS-FIELD-001)
+        // Hỗ trợ song song snake_case (chuẩn mới ISC) và PascalCase (giữ tương thích ngược tuyệt đối)
+        using (LogContext.PushProperty("correlation_id", correlationId))
         using (LogContext.PushProperty("CorrelationId", correlationId))
-        using (LogContext.PushProperty("TraceId", Activity.Current?.TraceId.ToString() ?? "N/A"))
-        using (LogContext.PushProperty("SpanId", Activity.Current?.SpanId.ToString() ?? "N/A"))
+        using (LogContext.PushProperty("request_id", correlationId))
+        using (LogContext.PushProperty("trace_id", traceId))
+        using (LogContext.PushProperty("TraceId", traceId))
+        using (LogContext.PushProperty("span_id", spanId))
+        using (LogContext.PushProperty("SpanId", spanId))
         {
             await _next(context);
         }

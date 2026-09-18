@@ -96,6 +96,12 @@ namespace ISC.Observability.Extensions
                 .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
+                // snake_case chuẩn mới R-OBS-FIELD-001
+                .Enrich.WithProperty("environment", environment)
+                .Enrich.WithProperty("service_name", serviceName)
+                .Enrich.WithProperty("application_version", serviceVersion)
+                .Enrich.With<SnakeCaseSystemEnricher>()
+                // PascalCase tương thích ngược (Backward Compatibility)
                 .Enrich.WithProperty("Environment", environment)
                 .Enrich.WithProperty("ServiceName", serviceName)
                 .Enrich.WithProperty("ApplicationVersion", serviceVersion)
@@ -342,8 +348,18 @@ namespace ISC.Observability.Extensions
 
                 options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
                 {
-                    diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-                    diagnosticContext.Set("UserAgent", httpContext.Request.Headers["UserAgent"]!.ToString());
+                    var host = httpContext.Request.Host.Value;
+                    var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+                    if (string.IsNullOrEmpty(userAgent))
+                        userAgent = httpContext.Request.Headers["User-Agent"].ToString();
+
+                    // snake_case chuẩn mới (R-OBS-FIELD-001)
+                    diagnosticContext.Set("request_host", host);
+                    diagnosticContext.Set("user_agent", userAgent);
+
+                    // PascalCase giữ tương thích ngược
+                    diagnosticContext.Set("RequestHost", host);
+                    diagnosticContext.Set("UserAgent", userAgent);
                 };
             });
 

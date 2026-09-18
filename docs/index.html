@@ -623,7 +623,7 @@ flowchart TD
     end
 
     subgraph Interface [OTLP Interface]
-        OTLP[gRPC 4317 / HTTP 4318]
+        OTLP[OTLP HTTP 4318 / Port 80 (Mặc định ISC) <br> gRPC 4317 (Tuỳ chọn)]
     end
 
     subgraph DevOpsDomain [DevOps/SRE Domain]
@@ -660,7 +660,7 @@ Zero Vendor Lock-in - Dev đổi ngôn ngữ không ảnh hưởng DevOps, DevOp
 
 ## 4. Công Cụ Đề Xuất
 - .NET 8, Serilog, OpenTelemetry .NET SDK
-- OTLP (gRPC 4317, HTTP 4318)
+- OTLP (Mặc định HTTP Protobuf 4318/80 cho hạ tầng ISC; hỗ trợ gRPC 4317)
 - OpenTelemetry Collector (contrib)
 - Elasticsearch 8.x, Kibana 8.x
     </script>
@@ -737,8 +737,8 @@ Dưới đây là bộ thuộc tính chuẩn (Resource Attributes) dựa trên *
     *   *Ví dụ:* `ecommerce-core`, `payment-gateway`, `crm-system`.
 *   **`service.name` (Tên Dịch vụ):**
     *   *Ý nghĩa:* Tên duy nhất của microservice hoặc ứng dụng. Tên này phải match 100% với tên Git Repository để dễ dàng tra cứu code.
-    *   *Convention:* `kebab-case`. Không bao gồm hậu tố môi trường (dev/prod) vào tên service.
-    *   *Ví dụ:* `order-processor`, `user-auth-api`, `inventory-worker`.
+    *   *Convention:* `kebab-case` kèm hậu tố **`-svc`** (bắt buộc theo quy chuẩn ISC `R-SVC-001`). Không chứa tên hạ tầng DB (như `mongo`, `sql`, `redis`).
+    *   *Ví dụ:* `order-svc`, `payment-svc`, `inventory-svc`, `customer-svc`.
 *   **`deployment.environment` (Môi trường triển khai):**
     *   *Ý nghĩa:* Phân tách dữ liệu giữa các môi trường để Dashboard có thể lọc ra (Filter) nhanh chóng, tránh nhầm lẫn log Dev với log Prod.
     *   *Convention:* Viết thường (lowercase). Chỉ sử dụng các giá trị chuẩn mực.
@@ -754,10 +754,10 @@ Khi tuân thủ nghiêm ngặt 4 thuộc tính trên, hệ thống APM (như Kib
 
 1.  **Level 1 (Filtering):** Môi trường `deployment.environment = prod`
 2.  **Level 2 (Grouping):** Nhóm dự án `service.namespace = ecommerce-core`
-3.  **Level 3 (Nodes):** Các dịch vụ liên kết với nhau `service.name = order-processor` gọi sang `inventory-worker`.
+3.  **Level 3 (Nodes):** Các dịch vụ liên kết với nhau `service.name = order-svc` gọi sang `inventory-svc`.
 
 **Lợi ích đối với vận hành:**
-*   **Developer:** Bị lỗi ở `order-processor` -> Lên Kibana search `service.name: "order-processor" AND deployment.environment: "prod"` -> Lấy mã lỗi đối chiếu vào Git Repo `order-processor` để fix.
+*   **Developer:** Bị lỗi ở `order-svc` -> Lên Kibana search `service.name: "order-svc" AND deployment.environment: "prod"` -> Lấy mã lỗi đối chiếu vào Git Repo `order-svc` để fix.
 *   **DevOps/SA:** Nhìn vào Service Map, phát hiện ngay nhóm `ecommerce-core` đang gọi chéo (cross-domain) quá nhiều sang nhóm `crm-system`, gây nguy cơ thắt cổ chai kiến trúc (Architectural Bottleneck), từ đó có kế hoạch refactor.
 
 ---
@@ -875,8 +875,8 @@ Request ────► [Gateway Span]
 ```
 
 ### 5.2. Truyền dẫn Ngữ cảnh (Context Propagation)
-*   **Chuẩn W3C Trace Context:** Bắt buộc sử dụng chuẩn W3C (`traceparent` header) khi truyền thông tin trace qua HTTP/gRPC.
-    *   Định dạng: `00-{trace_id}-{parent_id}-{trace_flags}`
+*   **Chuẩn W3C Trace Context & B3 Service Mesh:** Bắt buộc sử dụng chuẩn W3C (`traceparent` header: `00-{trace_id}-{span_id}-{trace_flags}`). 
+    *   *Service Mesh Support:* Đối với các cụm chạy qua Istio / Envoy Proxy sử dụng header B3 (`x-b3-traceid`), SDK đã tích hợp sẵn `CompositeTextMapPropagator` hỗ trợ song song đồng thời **W3C, B3 (Single & Multi), và Baggage** để không bị đứt đoạn phân vết xuyên qua Gateway/Sidecar.
 *   **Không đứt chuỗi:** Khi gọi các service ngoài (qua HTTP Client) hoặc đẩy message vào Queue (RabbitMQ, Kafka), Developer phải dùng thư viện tự động chèn (inject) thông tin trace context vào Header của request/message gửi đi. Ở phía nhận, service đích phải trích xuất (extract) context này để làm Span cha (Parent Span) cho luồng xử lý tiếp theo.
 
 > [!IMPORTANT]
@@ -1082,6 +1082,24 @@ Một hệ thống giám sát chuẩn phải cung cấp 3 cấp độ Dashboard 
     *   *Cách trả lời:* Nhìn vào biểu đồ *GC Pause Time*. Nếu trùng khớp với thời điểm GC Gen 2 (Full GC) chạy làm đứng toàn bộ ứng dụng (Stop-the-world), cần tối ưu lại việc phân bổ bộ nhớ (Memory Allocation) trong code.
 *   *Câu hỏi 4:* **Ứng dụng có bị tình trạng "nghẽn luồng" (Thread Pool Starvation) do dùng code bất đồng bộ sai cách (Sync-over-Async) không?**
     *   *Cách trả lời:* Nhìn vào biểu đồ *ThreadPool Queue Length*. Nếu số lượng Thread hoạt động đạt đỉnh và queue bắt đầu phình to trong khi CPU vẫn ở mức thấp, ứng dụng đang bị nghẽn luồng.
+
+---
+
+### CẤP ĐỘ 4: QA COMPLIANCE TRACKER (TIÊU CHÍ BẮT BUỘC CHO QUALITY GATE 2)
+*   **Đối tượng phục vụ:** QA, Tech Lead, PM, Ban Quản lý Chất lượng.
+*   **Mục tiêu:** Kiểm tra và bảo đảm 100% microservice trước khi phát hành lên Production đã tích hợp đầy đủ SDK chuẩn hóa và đang phát tín hiệu telemetry hợp lệ.
+
+#### Các thành phần hiển thị bắt buộc:
+1.  **SDK Adoption & Active Status (Stat / Gauge):**
+    *   Theo dõi metric `observability.sdk.active = 1` của từng service do SDK tự động phát ra. Nếu metric này bằng 0 hoặc missing, Quality Gate 2 sẽ tự động BLOCK không cho phép release.
+2.  **Telemetry Pillar Completeness (Table / Matrix):**
+    *   Bảng ma trận kiểm tra từng service có đủ cả 3 trụ cột (Logs streaming, Traces flowing, Metrics reporting).
+3.  **Trace Context Propagation Ratio (Gauge):**
+    *   Tỷ lệ phần trăm các request xuyên service bảo toàn được `TraceId` mà không bị đứt đoạn qua Gateway/Service Mesh (Target: 100%).
+
+#### Câu hỏi vận hành Dashboard 4 phải trả lời được:
+*   *Câu hỏi:* **Service này đã đủ điều kiện đạt Quality Gate 2 và sẵn sàng Go-live hay chưa?**
+    *   *Cách trả lời:* Nhìn vào chỉ số `observability.sdk.active` và trạng thái 3 trụ cột trên bảng ma trận tuân thủ QA.
 
 ---
 *Tài liệu này là quy chuẩn bắt buộc đối với toàn bộ các dự án phát triển phần mềm trong doanh nghiệp. Mọi vi phạm về cấu trúc log hoặc cố ý ghi đè/tắt telemetry mà không có sự phê duyệt của SA sẽ không được phép đưa lên môi trường Production.*
