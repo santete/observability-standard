@@ -2,7 +2,7 @@
 
 > **Dành cho:** Người phụ trách chỉnh sửa văn bản quy định trên SharePoint / Word  
 > **Tài liệu gốc cần sửa:** `ISC_QuyDinh_Observability_v1_0.docx` (hoặc bản PDF tương ứng)  
-> **Mục tiêu:** Đồng bộ văn bản quy định với thực tế vận hành hạ tầng ISC và SDK `ISC.Observability v1.4.2`.  
+> **Mục tiêu:** Đồng bộ văn bản quy định với thực tế vận hành hạ tầng ISC và SDK `ISC.Observability v1.4.3`.  
 > **Cách làm:** Tìm đúng vị trí đề mục trong file Word, xem đối chiếu **Nội dung cũ** và copy toàn bộ **Nội dung mới** dán đè lên.
 
 ---
