@@ -13,11 +13,15 @@
 
 ### HẠNG MỤC 1: MỤC 2 - THUẬT NGỮ VÀ ĐỊNH NGHĨA (Trang 1)
 
-* **Vị trí cần tìm:** Dòng định nghĩa thuật ngữ **`Label`** và **`Latency`** trong bảng Thuật ngữ.
+* **Vị trí cần tìm:** Dòng định nghĩa thuật ngữ **`TraceId / SpanId`**, **`Trace context`**, **`Label`**, và **`Latency`** trong bảng Thuật ngữ.
 * **Nội dung CŨ:**
+  > `TraceId / SpanId`: Mã định danh của trace và của từng span, dùng để ghép log và span về đúng một request.  
+  > `Trace context`: Thông tin TraceId/SpanId được truyền kèm lời gọi giữa các service để trace không bị đứt đoạn.  
   > `Label`: Nhãn phân loại gắn kèm metric, ví dụ theo service hoặc theo route.  
   > `Latency`: Thời gian xử lý một request.
-* **Nội dung MỚI (Copy & Paste đè lên 2 dòng tương ứng):**
+* **Nội dung MỚI (Copy & Paste đè lên các dòng tương ứng):**
+  > `trace_id / span_id`: Mã định danh của trace và của từng span, dùng để ghép log và span về đúng một request (chuẩn hóa dạng snake_case theo chuẩn OpenTelemetry OTLP).  
+  > `Trace context`: Thông tin trace_id/span_id được truyền kèm lời gọi giữa các service để trace không bị đứt đoạn.  
   > `Attributes (Labels)`: Nhãn phân loại gắn kèm metric, trace, log (ví dụ: theo `service_name` hoặc theo `route`). Trong chuẩn OpenTelemetry gọi là Attributes, trong Prometheus gọi là Labels.  
   > `Latency`: Thời gian xử lý một request, đo lường theo các phân vị **p50, p95, p99** (thay vì giá trị trung bình) để phản ánh trung thực chất lượng dịch vụ.
 
@@ -190,7 +194,7 @@
 * **Nội dung CŨ:**
   > Nội dung bắt buộc: Đối chiếu tuân thủ tại Quality Gate 2 (Mức độ: BLOCKER)
 * **Nội dung MỚI (Copy & Paste đè lên ô Nội dung bắt buộc):**
-  > Giám sát metric `observability.sdk.active = 1`, tỷ lệ truyền TraceId và đối chiếu đủ 3 trụ cột (Logs, Traces, Metrics) tại Quality Gate 2 (Mức độ: BLOCKER).
+  > Giám sát metric `observability.sdk.active = 1`, tỷ lệ truyền `trace_id` và đối chiếu đủ 3 trụ cột (Logs, Traces, Metrics) tại Quality Gate 2 (Mức độ: BLOCKER).
 
 ---
 
@@ -204,12 +208,12 @@
   ☐ Log correlate được về đúng TraceId của request
   ☐ Đủ metrics RPS, Latency, Error Rate, CPU
   ```
-* **Nội dung MỚI (Bổ sung thêm dòng thứ 5 vào checklist):**
+* **Nội dung MỚI (Bổ sung thêm dòng thứ 5 vào checklist và chuẩn hóa snake_case):**
   ```text
-  ☐ Mọi request mang TraceId và SpanId
-  ☐ TraceId liên tục qua toàn bộ luồng xử lý giữa các service
-  ☐ Log correlate được về đúng TraceId của request
+  ☐ Mọi request mang trace_id và span_id
+  ☐ trace_id liên tục qua toàn bộ luồng xử lý giữa các service
+  ☐ Log correlate được về đúng trace_id của request
   ☐ Đủ metrics RPS, Latency, Error Rate, CPU
   ☐ Có phát tín hiệu xác nhận tích hợp SDK chuẩn hóa (observability.sdk.active = 1)
   ```
-* *(Lý do: Đồng bộ tiêu chí nghiệm thu Quality Gate 2 của QA theo đúng quy định tại Mục 8 Layer 4).*
+* *(Lý do: Đồng bộ tiêu chí nghiệm thu Quality Gate 2 của QA theo đúng quy định tại Mục 8 Layer 4 và chuẩn hóa toàn diện tên trường snake_case).*
