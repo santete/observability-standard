@@ -34,9 +34,12 @@ namespace ISC.Observability.Telemetry
         {
             // At this point MeterProvider is fully initialized and subscribed to this Meter.
             // Counter.Add() will actually record the measurement.
+            var sdkVersion = typeof(ComplianceMetricsService).Assembly.GetName().Version?.ToString(3) ?? "1.4.2";
+
             _activeCounter.Add(1,
-                new KeyValuePair<string, object?>("service.name", _serviceName),
-                new KeyValuePair<string, object?>("environment", _environment));
+                new KeyValuePair<string, object?>("service_name", _serviceName),
+                new KeyValuePair<string, object?>("environment", _environment),
+                new KeyValuePair<string, object?>("sdk_version", sdkVersion));
 
             return Task.CompletedTask;
         }

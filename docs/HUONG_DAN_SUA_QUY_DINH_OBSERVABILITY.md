@@ -13,11 +13,13 @@
 
 ### HẠNG MỤC 1: MỤC 2 - THUẬT NGỮ VÀ ĐỊNH NGHĨA (Trang 1)
 
-* **Vị trí cần tìm:** Dòng định nghĩa thuật ngữ **`Label`** trong bảng Thuật ngữ.
+* **Vị trí cần tìm:** Dòng định nghĩa thuật ngữ **`Label`** và **`Latency`** trong bảng Thuật ngữ.
 * **Nội dung CŨ:**
-  > `Label`: Nhãn phân loại gắn kèm metric, ví dụ theo service hoặc theo route.
-* **Nội dung MỚI (Copy & Paste đè lên dòng này):**
-  > `Attributes (Labels)`: Nhãn phân loại gắn kèm metric, trace, log (ví dụ: theo `service_name` hoặc theo `route`). Trong chuẩn OpenTelemetry gọi là Attributes, trong Prometheus gọi là Labels.
+  > `Label`: Nhãn phân loại gắn kèm metric, ví dụ theo service hoặc theo route.  
+  > `Latency`: Thời gian xử lý một request.
+* **Nội dung MỚI (Copy & Paste đè lên 2 dòng tương ứng):**
+  > `Attributes (Labels)`: Nhãn phân loại gắn kèm metric, trace, log (ví dụ: theo `service_name` hoặc theo `route`). Trong chuẩn OpenTelemetry gọi là Attributes, trong Prometheus gọi là Labels.  
+  > `Latency`: Thời gian xử lý một request, đo lường theo các phân vị **p50, p95, p99** (thay vì giá trị trung bình) để phản ánh trung thực chất lượng dịch vụ.
 
 ---
 
@@ -189,3 +191,25 @@
   > Nội dung bắt buộc: Đối chiếu tuân thủ tại Quality Gate 2 (Mức độ: BLOCKER)
 * **Nội dung MỚI (Copy & Paste đè lên ô Nội dung bắt buộc):**
   > Giám sát metric `observability.sdk.active = 1`, tỷ lệ truyền TraceId và đối chiếu đủ 3 trụ cột (Logs, Traces, Metrics) tại Quality Gate 2 (Mức độ: BLOCKER).
+
+---
+
+### HẠNG MỤC 8: MỤC 9.2 - TIÊU CHÍ NGHIỆM THU TRACING & METRICS (Trang 8)
+
+* **Vị trí cần tìm:** Khối checklist tại **Mục 9.2**.
+* **Nội dung CŨ:**
+  ```text
+  ☐ Mọi request mang TraceId và SpanId
+  ☐ TraceId liên tục qua toàn bộ luồng xử lý giữa các service
+  ☐ Log correlate được về đúng TraceId của request
+  ☐ Đủ metrics RPS, Latency, Error Rate, CPU
+  ```
+* **Nội dung MỚI (Bổ sung thêm dòng thứ 5 vào checklist):**
+  ```text
+  ☐ Mọi request mang TraceId và SpanId
+  ☐ TraceId liên tục qua toàn bộ luồng xử lý giữa các service
+  ☐ Log correlate được về đúng TraceId của request
+  ☐ Đủ metrics RPS, Latency, Error Rate, CPU
+  ☐ Có phát tín hiệu xác nhận tích hợp SDK chuẩn hóa (observability.sdk.active = 1)
+  ```
+* *(Lý do: Đồng bộ tiêu chí nghiệm thu Quality Gate 2 của QA theo đúng quy định tại Mục 8 Layer 4).*
