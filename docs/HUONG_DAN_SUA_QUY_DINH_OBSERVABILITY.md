@@ -69,16 +69,17 @@
   > **BLOCKER:** Thiếu `trace_id`, `service_name` hoặc `severity_text` — log không dùng được để điều tra sự cố. Cố tình ghi đè hoặc vô hiệu hóa các trường này sẽ bị từ chối phê duyệt Merge Request / Quality Gate 2.
   >
   > **Các trường bắt buộc trong bản ghi log:**
-  > | Tên trường | Tính bắt buộc | Ý nghĩa |
+  > | Tên trường | Tính bắt buộc | Ý nghĩa / Cơ chế sinh |
   > |---|---|---|
-  > | `timestamp` | Bắt buộc | Thời gian ghi nhận sự kiện theo chuẩn ISO 8601 UTC. |
-  > | `severity_text` | Bắt buộc | Mức độ nghiêm trọng của log theo chuẩn OTLP (`Information`, `Warning`, `Error`). |
-  > | `service_name` | Bắt buộc | Tên microservice (định dạng `kebab-case` kèm hậu tố `-svc`). |
-  > | `environment` | Bắt buộc | Môi trường triển khai (`production`, `staging`, `dev`). |
-  > | `trace_id` | Bắt buộc | Mã định danh truy vết phân tán xuyên suốt các service. |
-  > | `span_id` | Bắt buộc | Mã định danh công đoạn thực thi hiện tại. |
-  > | `correlation_id` | Bắt buộc | Mã đối soát request từ Client/Gateway gửi vào. |
-  > | `message` | Bắt buộc | Nội dung thông điệp mô tả sự kiện. |
+  > | `timestamp` | Bắt buộc | **[Tự động - SDK]** Thời gian ghi nhận sự kiện theo chuẩn ISO 8601 UTC. |
+  > | `severity_text` | Bắt buộc | **[Tự động - SDK]** Mức độ nghiêm trọng của log (`Information`, `Warning`, `Error`), tự động ánh xạ từ ILogger LogLevel sang chuẩn OTLP. |
+  > | `service_name` | Bắt buộc | **[Tự động - SDK]** Tên microservice (kebab-case kèm `-svc`), tự động lấy từ cấu hình `appsettings.json` hoặc `OTEL_SERVICE_NAME`. |
+  > | `environment` | Bắt buộc | **[Tự động - SDK]** Môi trường triển khai, tự động lấy từ biến môi trường `ASPNETCORE_ENVIRONMENT`. |
+  > | `trace_id` | Bắt buộc | **[Tự động - OTel]** Mã định danh truy vết phân tán xuyên suốt các service, tự động trích xuất từ W3C `traceparent` hoặc sinh mới ngẫu nhiên 32 ký tự hex. Dev không phải truyền bằng tay. |
+  > | `span_id` | Bắt buộc | **[Tự động - OTel]** Mã định danh công đoạn thực thi hiện tại, tự động lấy từ `Activity.Current`. Dev không phải truyền bằng tay. |
+  > | `correlation_id` | Bắt buộc | **[Tự động - SDK]** Mã đối soát request từ Client/Gateway gửi vào, tự động trích xuất từ Header `X-Correlation-ID` hoặc sinh mới. |
+  > | `message` | Bắt buộc | **[Dev truyền vào]** Nội dung thông điệp mô tả sự kiện qua lệnh gọi `_logger.LogX(...)`. |
+  > | `{custom_fields}` | Tùy chọn | **[Dev truyền vào]** Các biến ngữ cảnh nghiệp vụ (ví dụ: `{order_id}`, `{customer_id}`). Bắt buộc đặt tên `snake_case` và tuân thủ che chắn dữ liệu nhạy cảm PII. |
 
 ---
 
