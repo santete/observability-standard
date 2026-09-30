@@ -103,8 +103,8 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
 
     catalog_data = {
         "A": [
-            ".NET 8 (SDK hỗ trợ chính thức)",
-            ".NET 6 / .NET 7",
+            ".NET 8 (SDK v1.5+ hỗ trợ chính thức)",
+            ".NET 6 / .NET 7 (SDK v1.5+ hỗ trợ chính thức)",
             ".NET Framework (Legacy)",
             "Node.js / NestJS",
             "Python (FastAPI / Django)",
@@ -119,7 +119,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "Chưa triển khai"
         ],
         "C": [
-            "Đã cài SDK ISC.Observability (.NET 8)",
+            "Đã cài SDK ISC.Observability (.NET 6/7/8)",
             "Cấu hình OTel Native (Biến môi trường)",
             "Đang tích hợp",
             "Chưa tích hợp"
@@ -144,7 +144,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
         "G": [
             "Đã ghi nhận (= 1)",
             "Chưa ghi nhận (= 0)",
-            "N/A (Ngoài .NET 8)"
+            "N/A (Ngoài .NET 6/7/8)"
         ]
     }
 
@@ -166,7 +166,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
     ws_catalog.row_dimensions[14].height = 28
 
     ref_rows = [
-        ("Hạng mục kiểm tra", "Tiêu chí công nhận 'Đạt chuẩn'", "Cơ chế hỗ trợ trong SDK (.NET 8)"),
+        ("Hạng mục kiểm tra", "Tiêu chí công nhận 'Đạt chuẩn'", "Cơ chế hỗ trợ trong SDK (.NET 6 / 7 / 8)"),
         ("Trục 1: Logging", "Xuất JSON có cấu trúc; đủ trường bắt buộc (timestamp, severity_text, service_name, environment, trace_id, span_id, correlation_id, message); biến nghiệp vụ dạng snake_case; che PII nhạy cảm.", "SDK tự động hóa 90% (Dev chỉ cần viết message và đặt tên biến nghiệp vụ snake_case)."),
         ("Trục 2: Tracing", "Lan truyền ngữ cảnh W3C Trace Context (traceparent) & B3; tự động tạo span cho HTTP/DB/Redis; tạo custom span cho tác vụ nội bộ > 200ms.", "SDK tự động gắn ASP.NET Core, HttpClient, EF Core, SqlClient, Redis, Quartz instrumentation."),
         ("Trục 3: Metrics", "Đầy đủ Golden Signals (RPS, Latency p50/p95/p99, Error Rate); phát metric tuân thủ observability.sdk.active = 1; nhãn (label) dạng snake_case và Low Cardinality.", "SDK tự động phát Golden Signals, Runtime metrics và observability.sdk.active = 1."),
@@ -249,7 +249,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
         ("C", "Tên Service\n(Chuẩn kebab-case-svc)", "[NHẬP TEXT]", sub_input_fill, 26, header_id_fill),
         ("D", "Môi trường\n(Environment)", "[CHỌN DANH MỤC]", sub_drop_fill, 18, header_id_fill),
         ("E", "Tech Stack của Service", "[CHỌN DANH MỤC]", sub_drop_fill, 28, header_id_fill),
-        ("F", "Khả năng hỗ trợ của SDK\n(Hiện chỉ hỗ trợ .NET 8)", "[TỰ ĐỘNG TÍNH]", sub_auto_fill, 30, header_id_fill),
+        ("F", "Khả năng hỗ trợ của SDK\n(Hỗ trợ .NET 6 / 7 / 8)", "[TỰ ĐỘNG TÍNH]", sub_auto_fill, 30, header_id_fill),
         ("G", "Phương thức Tích hợp", "[CHỌN DANH MỤC]", sub_drop_fill, 28, header_id_fill),
 
         ("H", "Trục 1: LOGGING\n(JSON, snake_case, Mask PII)", "[CHỌN DANH MỤC]", sub_drop_fill, 25, header_pillar_fill),
@@ -302,8 +302,8 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "B": "Hệ thống Thanh toán (Core Payment)",
             "C": "payment-svc",
             "D": "Production",
-            "E": ".NET 8 (SDK hỗ trợ chính thức)",
-            "G": "Đã cài SDK ISC.Observability (.NET 8)",
+            "E": ".NET 8 (SDK v1.5+ hỗ trợ chính thức)",
+            "G": "Đã cài SDK ISC.Observability (.NET 6/7/8)",
             "H": "Đã hoàn thành (Đạt chuẩn)",
             "I": "Đã hoàn thành (Đạt chuẩn)",
             "J": "Đã hoàn thành (Đạt chuẩn)",
@@ -321,8 +321,8 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "B": "Hệ thống Đơn hàng (E-Commerce)",
             "C": "order-svc",
             "D": "Staging / UAT",
-            "E": ".NET 8 (SDK hỗ trợ chính thức)",
-            "G": "Đã cài SDK ISC.Observability (.NET 8)",
+            "E": ".NET 6 / .NET 7 (SDK v1.5+ hỗ trợ chính thức)",
+            "G": "Đã cài SDK ISC.Observability (.NET 6/7/8)",
             "H": "Đã hoàn thành (Đạt chuẩn)",
             "I": "Đã hoàn thành (Đạt chuẩn)",
             "J": "Đang triển khai",
@@ -334,7 +334,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "S": "https://kibana.isc.internal/app/dashboards#/view/order-svc",
             "T": "Trần Thị B",
             "U": "2026-10-05",
-            "V": "Mẫu: Đang hoàn thiện custom metrics & Dashboard Layer 3"
+            "V": "Mẫu: Service .NET 6 cài trực tiếp SDK v1.5.0, đang hoàn thiện Dashboard Layer 3"
         },
         {
             "B": "Hệ thống Thông báo (Notification Hub)",
@@ -349,7 +349,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "M": "Đã có (Đạt chuẩn)",
             "N": "Đã có (Đạt chuẩn)",
             "P": "Qua OTel Collector (Đúng chuẩn)",
-            "Q": "N/A (Ngoài .NET 8)",
+            "Q": "N/A (Ngoài .NET 6/7/8)",
             "S": "https://kibana.isc.internal/app/dashboards#/view/notification-svc",
             "T": "Lê Văn C",
             "U": "2026-09-28",
@@ -359,7 +359,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "B": "Hệ thống Đối soát Cũ (Legacy Billing)",
             "C": "billing-worker-svc",
             "D": "Development / SIT",
-            "E": ".NET 6 / .NET 7",
+            "E": ".NET 6 / .NET 7 (SDK v1.5+ hỗ trợ chính thức)",
             "G": "Đang tích hợp",
             "H": "Đã gắn (Chưa đạt chuẩn)",
             "I": "Chưa triển khai",
@@ -372,7 +372,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "S": "",
             "T": "Phạm Văn D",
             "U": "2026-10-20",
-            "V": "Mẫu: Đang vi phạm đẩy log thẳng vào Kafka, chờ nâng cấp lên .NET 8"
+            "V": "Mẫu: Đang vi phạm đẩy log thẳng vào Kafka, cần cài gói SDK v1.5.0 (.NET 6/7/8)"
         },
         {
             "B": "Hệ thống Gợi ý AI (Recommendation)",
@@ -387,7 +387,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             "M": "Chưa có",
             "N": "Chưa có",
             "P": "Chưa cấu hình",
-            "Q": "N/A (Ngoài .NET 8)",
+            "Q": "N/A (Ngoài .NET 6/7/8)",
             "S": "",
             "T": "Hoàng Văn E",
             "U": "2026-11-01",
@@ -406,7 +406,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
         # Formula F: SDK Compatibility based on Tech Stack (E)
         ws_tracking[f"F{r_idx}"] = (
             f'=IF(E{r_idx}="", "", '
-            f'IF(E{r_idx}=".NET 8 (SDK hỗ trợ chính thức)", "Hỗ trợ chuẩn SDK (.NET 8)", '
+            f'IF(OR(E{r_idx}=".NET 8 (SDK v1.5+ hỗ trợ chính thức)", E{r_idx}=".NET 6 / .NET 7 (SDK v1.5+ hỗ trợ chính thức)"), "Hỗ trợ chuẩn SDK (.NET 6/7/8)", '
             f'"Ngoài phạm vi SDK (Dùng OTel Native)"))'
         )
 
@@ -462,7 +462,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
     # =========================================================================
     validations = [
         ("D", "'03_DANH_MUC_CHUAN'!$B$4:$B$7", "Chọn Môi trường", "Vui lòng chọn môi trường từ danh sách"),
-        ("E", "'03_DANH_MUC_CHUAN'!$A$4:$A$11", "Chọn Tech Stack", "Hiện tại SDK chỉ hỗ trợ chính thức .NET 8"),
+        ("E", "'03_DANH_MUC_CHUAN'!$A$4:$A$11", "Chọn Tech Stack", "SDK v1.5.0+ hỗ trợ chính thức .NET 6, .NET 7 và .NET 8"),
         ("G", "'03_DANH_MUC_CHUAN'!$C$4:$C$7", "Chọn Phương thức tích hợp", "Chọn phương thức tích hợp"),
         ("H", "'03_DANH_MUC_CHUAN'!$D$4:$D$7", "Trạng thái Logging", "Chọn trạng thái triển khai trục Logging"),
         ("I", "'03_DANH_MUC_CHUAN'!$D$4:$D$7", "Trạng thái Tracing", "Chọn trạng thái triển khai trục Tracing"),
@@ -499,8 +499,8 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
         '"Qua OTel Collector (Đúng chuẩn)"',
         '"Đã ghi nhận (= 1)"',
         '"ĐẠT CHUẨN QG2 (PASS)"',
-        '"Hỗ trợ chuẩn SDK (.NET 8)"',
-        '"Đã cài SDK ISC.Observability (.NET 8)"'
+        '"Hỗ trợ chuẩn SDK (.NET 6/7/8)"',
+        '"Đã cài SDK ISC.Observability (.NET 6/7/8)"'
     ]
     for val in green_values:
         ws_tracking.conditional_formatting.add(
@@ -561,7 +561,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
     ws_summary.row_dimensions[1].height = 36
 
     ws_summary.merge_cells("A2:F2")
-    ws_summary["A2"] = "Số liệu tự động tổng hợp theo thời gian thực từ Sheet '02_TRACKING_SERVICES' (Dựa trên Quy định Observability v1.0 & SDK v1.4.3)"
+    ws_summary["A2"] = "Số liệu tự động tổng hợp theo thời gian thực từ Sheet '02_TRACKING_SERVICES' (Dựa trên Quy định Observability v1.0 & SDK v1.5.0 Multi-Target .NET 6/7/8)"
     ws_summary["A2"].font = subtitle_font
     ws_summary["A2"].fill = navy_fill
     ws_summary["A2"].alignment = align_center
@@ -727,12 +727,12 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
     )
 
     # --- BLOCK 4: PHÂN BỔ THEO TECH STACK & KHẢ NĂNG HỖ TRỢ CỦA SDK ---
-    add_summary_section_header(26, "IV. THỐNG KÊ THEO TECH STACK (ĐÁNH GIÁ ĐỘ PHỦ SDK .NET 8)", header_meta_fill)
+    add_summary_section_header(26, "IV. THỐNG KÊ THEO TECH STACK (ĐÁNH GIÁ ĐỘ PHỦ SDK .NET 6 / 7 / 8)", header_meta_fill)
     add_summary_table_header(27, "Tech Stack của Service", "Số lượng Service", "Tỷ trọng (%)", "Cơ chế Tích hợp Chuẩn")
 
     tech_stacks_summary = [
-        (".NET 8 (SDK hỗ trợ chính thức)", "Cài trực tiếp NuGet package ISC.Observability v1.4.3", pass_fill),
-        (".NET 6 / .NET 7", "Khuyến nghị nâng cấp .NET 8 hoặc dùng OTel Native", zebra_odd_fill),
+        (".NET 8 (SDK v1.5+ hỗ trợ chính thức)", "Cài trực tiếp NuGet package ISC.Observability v1.5.0", pass_fill),
+        (".NET 6 / .NET 7 (SDK v1.5+ hỗ trợ chính thức)", "Cài trực tiếp NuGet package ISC.Observability v1.5.0 (Multi-target)", pass_fill),
         (".NET Framework (Legacy)", "Dùng OpenTelemetry .NET Framework SDK / OTel Native", zebra_odd_fill),
         ("Node.js / NestJS", "Dùng @opentelemetry/sdk-node + Biến môi trường chuẩn", zebra_odd_fill),
         ("Python (FastAPI / Django)", "Dùng opentelemetry-distro + Biến môi trường chuẩn", zebra_odd_fill),
@@ -748,7 +748,7 @@ def create_observability_tracking_excel(filename="docs/ISC_Form_Tracking_Observa
             f'=COUNTIF(\'02_TRACKING_SERVICES\'!E{START_ROW}:E{END_ROW}, "{stack_name}")',
             f"=IF({total_svc_ref}>0, C{idx}/{total_svc_ref}, 0)",
             stack_note,
-            highlight_fill=fill_st if stack_name.startswith(".NET 8") else None
+            highlight_fill=fill_st if ("SDK v1.5+" in stack_name) else None
         )
 
     wb.save(filename)

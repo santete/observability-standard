@@ -1,6 +1,6 @@
-# 📦 ISC.Observability SDK
+# 📦 ISC.Observability SDK (Multi-target: .NET 6 / .NET 7 / .NET 8)
 
-> **Gói SDK Tiêu chuẩn (Official Standard SDK) dành cho các dịch vụ Backend (.NET) thuộc hệ sinh thái Microservices.** 
+> **Gói SDK Tiêu chuẩn (Official Standard SDK) dành cho các dịch vụ Backend (.NET 6, .NET 7, .NET 8) thuộc hệ sinh thái Microservices.** 
 > Tự động hóa toàn bộ quá trình thu thập Logs, Metrics, và Traces (OpenTelemetry) theo tiêu chuẩn vận hành tập trung mà không yêu cầu thay đổi logic code của ứng dụng.
 
 ---
@@ -9,6 +9,7 @@
 
 Chỉ với **1 dòng code tích hợp**, ứng dụng của bạn sẽ lập tức sở hữu:
 
+- 🎯 **Hỗ trợ Đa nền tảng (Multi-Targeting `net6.0;net7.0;net8.0`):** Cài đặt trực tiếp trên cả các dự án `.NET 6`, `.NET 7` và `.NET 8` (hỗ trợ cả `WebApplicationBuilder`, `IHostApplicationBuilder` và `IServiceCollection` / `Startup.cs`).
 - 🔗 **Auto-Instrumentation (Tracing):** Tự động theo dõi toàn bộ HTTP Requests (In/Out), gán `TraceId` xuyên suốt qua các Microservices (W3C TraceContext).
 - 📝 **Structured Logging:** Ghi log có cấu trúc (JSON) thông qua Serilog, tự động đính kèm `TraceId` vào mỗi dòng log.
 - 🛡️ **Global Exception Handling:** Tự động "bắt" toàn bộ các lỗi (Crash/Exception) chưa được xử lý, chụp StackTrace và ghi log mức `ERROR` tránh lọt lỗi.
@@ -30,7 +31,7 @@ SDK hiện tại đã tích hợp sẵn thư viện để theo dõi (trace) các
 
 ## 📥 Cài đặt (Installation)
 
-Cài đặt package thông qua NuGet Package Manager hoặc .NET CLI:
+Cài đặt package thông qua NuGet Package Manager hoặc .NET CLI (tự động nhận diện `.NET 6`, `.NET 7` hoặc `.NET 8`):
 
 ```bash
 dotnet add package ISC.Observability

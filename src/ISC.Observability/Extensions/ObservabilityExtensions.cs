@@ -24,50 +24,85 @@ namespace ISC.Observability.Extensions
     {
         public static IHostApplicationBuilder AddStandardObservability(this IHostApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null)
         {
-            var serviceName = builder.Configuration["ServiceName"] ?? defaultServiceName;
+            ConfigureStandardObservability(builder.Services, builder.Configuration, builder.Environment, defaultServiceName, configureLogger);
+            return builder;
+        }
+
+        /// <summary>
+        /// Overload cho WebApplicationBuilder (hỗ trợ xuyên suốt .NET 6, .NET 7 và .NET 8,
+        /// do trên .NET 6 và .NET 7 lớp WebApplicationBuilder chưa kế thừa IHostApplicationBuilder).
+        /// </summary>
+        public static WebApplicationBuilder AddStandardObservability(this WebApplicationBuilder builder, string defaultServiceName, Action<LoggerConfiguration>? configureLogger = null)
+        {
+            ConfigureStandardObservability(builder.Services, builder.Configuration, builder.Environment, defaultServiceName, configureLogger);
+            return builder;
+        }
+
+        /// <summary>
+        /// Overload cho IServiceCollection (hỗ trợ các dự án .NET 6/7/8 dùng cấu trúc Startup.cs hoặc Host.CreateDefaultBuilder).
+        /// </summary>
+        public static IServiceCollection AddStandardObservability(
+            this IServiceCollection services,
+            IConfiguration configuration,
+            IHostEnvironment environmentInfo,
+            string defaultServiceName,
+            Action<LoggerConfiguration>? configureLogger = null)
+        {
+            ConfigureStandardObservability(services, configuration, environmentInfo, defaultServiceName, configureLogger);
+            return services;
+        }
+
+        private static void ConfigureStandardObservability(
+            IServiceCollection services,
+            IConfiguration configuration,
+            IHostEnvironment environmentInfo,
+            string defaultServiceName,
+            Action<LoggerConfiguration>? configureLogger)
+        {
+            var serviceName = configuration["ServiceName"] ?? defaultServiceName;
 
             // Lưu serviceName đã resolve vào config để các hosted service (ComplianceMetricsService) đọc được,
             // vì hosted service không có access vào tham số defaultServiceName.
-            builder.Configuration["ISC:Observability:ResolvedServiceName"] = serviceName;
+            configuration["ISC:Observability:ResolvedServiceName"] = serviceName;
             
             var assembly = Assembly.GetEntryAssembly();
             var autoVersion = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
                               ?? assembly?.GetName().Version?.ToString() 
                               ?? "1.0.0";
-            var serviceVersion = builder.Configuration["ServiceVersion"] ?? Environment.GetEnvironmentVariable("APP_VERSION") ?? autoVersion;
+            var serviceVersion = configuration["ServiceVersion"] ?? Environment.GetEnvironmentVariable("APP_VERSION") ?? autoVersion;
             
-            var environment = builder.Environment.EnvironmentName;
+            var environment = environmentInfo.EnvironmentName;
 
             // Đọc cấu hình Feature Flags
-            var enableRedis = builder.Configuration.GetValue<bool>("Otel:EnableRedis", false);
-            var enableGrpc = builder.Configuration.GetValue<bool>("Otel:EnableGrpc", false);
-            var enableQuartz = builder.Configuration.GetValue<bool>("Otel:EnableQuartz", false);
-            var enableMongo = builder.Configuration.GetValue<bool>("Otel:EnableMongo", false);
-            var enableMassTransit = builder.Configuration.GetValue<bool>("Otel:EnableMassTransit", false);
+            var enableRedis = configuration.GetValue<bool>("Otel:EnableRedis", false);
+            var enableGrpc = configuration.GetValue<bool>("Otel:EnableGrpc", false);
+            var enableQuartz = configuration.GetValue<bool>("Otel:EnableQuartz", false);
+            var enableMongo = configuration.GetValue<bool>("Otel:EnableMongo", false);
+            var enableMassTransit = configuration.GetValue<bool>("Otel:EnableMassTransit", false);
             // Lỗi 7: EF Core giờ thật sự đọc feature flag (trước đây bật vô điều kiện, README nói dối).
-            var enableEntityFramework = builder.Configuration.GetValue<bool>("Otel:EnableEntityFramework", true);
+            var enableEntityFramework = configuration.GetValue<bool>("Otel:EnableEntityFramework", true);
 
             // Lỗi 3: chọn protocol. Mặc định http vì hạ tầng ISC chỉ mở OTLP/HTTP cổng 80.
-            var protocolStr = builder.Configuration["Otel:Protocol"] ?? "http";
+            var protocolStr = configuration["Otel:Protocol"] ?? "http";
             var useHttp = protocolStr.Equals("http", StringComparison.OrdinalIgnoreCase);
 
             // Lỗi 6: cho lọc ActivitySource thay vì AddSource("*") vô điều kiện.
-            var customSourcesRaw = builder.Configuration["Otel:CustomSources"];
+            var customSourcesRaw = configuration["Otel:CustomSources"];
 
             // Lỗi 8: chọn sampler.
-            var samplerStr = builder.Configuration["Otel:TracesSampler"];
+            var samplerStr = configuration["Otel:TracesSampler"];
 
             // Ingestion key (tuỳ chọn, dùng làm header auth cho exporter nếu khác rỗng).
-            var ingestionKey = builder.Configuration["OpenTelemetry:IngestionKey"];
+            var ingestionKey = configuration["OpenTelemetry:IngestionKey"];
 
             // Giải quyết endpoint cho từng signal.
             // Ưu tiên 1: OpenTelemetry:<Signal> — full URL đã kèm path (vd http://host/v1/traces).
             //            Khi đó SDK KHÔNG hardcode path → OTel đổi keyword (/v2/traces...) vẫn dùng được.
             // Ưu tiên 2 (fallback, protocol=http): Otel:OtlpHttpEndpoint + "/v1/<signal>".
             // Ưu tiên 3 (fallback, protocol=grpc): Otel:OtlpEndpoint (base, gRPC tự nối path).
-            var (tracesEndpoint, tracesHttp) = ResolveOtlpEndpoint(builder.Configuration, "OpenTelemetry:Tracing", "v1/traces", useHttp);
-            var (metricsEndpoint, metricsHttp) = ResolveOtlpEndpoint(builder.Configuration, "OpenTelemetry:Metrics", "v1/metrics", useHttp);
-            var (logsEndpoint, _) = ResolveOtlpEndpoint(builder.Configuration, "OpenTelemetry:Logs", "v1/logs", useHttp);
+            var (tracesEndpoint, tracesHttp) = ResolveOtlpEndpoint(configuration, "OpenTelemetry:Tracing", "v1/traces", useHttp);
+            var (metricsEndpoint, metricsHttp) = ResolveOtlpEndpoint(configuration, "OpenTelemetry:Metrics", "v1/metrics", useHttp);
+            var (logsEndpoint, _) = ResolveOtlpEndpoint(configuration, "OpenTelemetry:Logs", "v1/logs", useHttp);
 
 
             // ==========================================
@@ -77,21 +112,21 @@ namespace ISC.Observability.Extensions
             // Console Sink: Tự động điều chỉnh theo môi trường
             // - Development/Local: Bật mặc định, format plain text cho dev đọc
             // - Production/Staging: Tắt mặc định (đã có OTel Sink), opt-in qua "Serilog:Console:Enabled": true
-            var consoleLevelStr = builder.Configuration["Serilog:Console:RestrictedToMinimumLevel"];
+            var consoleLevelStr = configuration["Serilog:Console:RestrictedToMinimumLevel"];
             var consoleLevel = Enum.TryParse<LogEventLevel>(consoleLevelStr, true, out var parsedLevel) 
                 ? parsedLevel 
                 : LogEventLevel.Information;
 
-            var isDevEnvironment = builder.Environment.IsDevelopment() 
+            var isDevEnvironment = environmentInfo.IsDevelopment() 
                 || string.Equals(environment, "Local", StringComparison.OrdinalIgnoreCase);
-            var consoleSinkEnabled = builder.Configuration["Serilog:Console:Enabled"] is { } enabledStr
+            var consoleSinkEnabled = configuration["Serilog:Console:Enabled"] is { } enabledStr
                 && bool.TryParse(enabledStr, out var enabledParsed)
                 ? enabledParsed
                 : isDevEnvironment;
 
             // SDK đặt mặc định hợp lý, Dev có thể override qua appsettings.json section "Serilog"
             var logConfig = new LoggerConfiguration()
-                .ReadFrom.Configuration(builder.Configuration)  // Cho phép Dev override từ appsettings.json
+                .ReadFrom.Configuration(configuration)  // Cho phép Dev override từ appsettings.json
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
@@ -139,8 +174,8 @@ namespace ISC.Observability.Extensions
 
             // Nếu Dev không cấu hình MinimumLevel trong appsettings.json,
             // SDK tự đặt mặc định là Information
-            if (builder.Configuration.GetSection("Serilog:MinimumLevel").Value == null
-                && builder.Configuration.GetSection("Serilog:MinimumLevel:Default").Value == null)
+            if (configuration.GetSection("Serilog:MinimumLevel").Value == null
+                && configuration.GetSection("Serilog:MinimumLevel:Default").Value == null)
             {
                 logConfig.MinimumLevel.Information();
             }
@@ -155,14 +190,14 @@ namespace ISC.Observability.Extensions
             // ==========================================
             Log.Information("Standard Observability SDK initialized for {ServiceName} with Environment {Environment}. [Compliance=True]", serviceName, environment);
 
-            builder.Services.AddSerilog();
+            services.AddSerilog();
 
             // ==========================================
             // QA COMPLIANCE TRACKING (Hosted Service)
             // ==========================================
             // Registered as IHostedService so Counter.Add() runs AFTER MeterProvider is initialized.
             // This fixes the no-op bug where metrics were lost because Add() was called before Build().
-            builder.Services.AddHostedService<ComplianceMetricsService>();
+            services.AddHostedService<ComplianceMetricsService>();
 
             // Lỗi 5: self-diagnostics — exporter không còn "chết câm".
             // EventListener này lắng nghe EventSource của OTel exporter và log Warning ra Serilog
@@ -187,7 +222,7 @@ namespace ISC.Observability.Extensions
                     new KeyValuePair<string, object>("deployment.environment", environment)
                 });
 
-            builder.Services.AddOpenTelemetry()
+            services.AddOpenTelemetry()
                 .WithTracing(tracing =>
                 {
                     tracing
@@ -260,8 +295,6 @@ namespace ISC.Observability.Extensions
                             opt.Headers = $"Authorization=Bearer {ingestionKey}";
                     });
                 });
-
-            return builder;
         }
 
         /// <summary>

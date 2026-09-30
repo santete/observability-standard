@@ -49,7 +49,11 @@ public class GlobalExceptionMiddleware
             if (activity != null)
             {
                 activity.SetStatus(ActivityStatusCode.Error, ex.Message);
+#if NET8_0_OR_GREATER
                 activity.AddException(ex);
+#else
+                activity.RecordException(ex);
+#endif
             }
 
             // Rethrow the exception so the application can handle it normally

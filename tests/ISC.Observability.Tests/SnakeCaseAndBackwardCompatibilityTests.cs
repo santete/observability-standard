@@ -111,4 +111,49 @@ public class SnakeCaseStandardLoggingTests : IDisposable
         Assert.False(evt.Properties.ContainsKey("TraceId"), "Polluted with PascalCase: TraceId");
         Assert.False(evt.Properties.ContainsKey("SpanId"), "Polluted with PascalCase: SpanId");
     }
+
+    [Fact]
+    public void ServiceCollectionOverload_WorksForLegacyHostBuilderStyle()
+    {
+        var testSink = new TestSink();
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = "Staging"
+        });
+
+        var ex = Record.Exception(() =>
+            builder.Services.AddStandardObservability(
+                builder.Configuration,
+                builder.Environment,
+                "legacy-host-svc",
+                cfg => cfg.WriteTo.Sink(testSink)));
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_RecordsException_AcrossAllDotNetVersions()
+    {
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = _ => true,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        using var source = new ActivitySource("test-source");
+        using var activity = source.StartActivity("test-span");
+
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GlobalExceptionMiddleware>.Instance;
+
+        var middleware = new GlobalExceptionMiddleware(_ => throw new InvalidOperationException("Boom on multi-target"), logger);
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
+
+        Assert.NotNull(activity);
+        Assert.Equal(ActivityStatusCode.Error, activity!.Status);
+        Assert.Contains(activity.Events, e => e.Name == "exception");
+    }
 }
