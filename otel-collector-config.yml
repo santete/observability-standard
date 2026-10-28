@@ -12,11 +12,61 @@ processors:
     send_batch_size: 5000
     send_batch_max_size: 10000
 
+  # --- Business-log -> Kafka routing (per topic) -----------------------------------------
+  # Dev đánh dấu log bằng ISC.Observability.Logging.BusinessLog.Begin("<topic>"), gắn 2
+  # log-record attribute: log_category=business, kafka_topic=<topic>.
+  #
+  # LƯU Ý QUAN TRỌNG (đã verify thật bằng docker run + curl + kafka-console-consumer,
+  # không đoán): kafkaexporter v0.114.0 có field `topic_from_attribute`, NHƯNG với signal logs
+  # nó chỉ đọc được RESOURCE attribute, KHÔNG đọc log-record attribute — nên không dùng được để
+  # mỗi log event tự chọn 1 topic khác nhau (Resource là metadata tĩnh theo cả process, không
+  # đổi được theo từng dòng log). Vì vậy route bằng cách: với MỖI topic Dev đã thống nhất dùng,
+  # thêm 1 filter processor giữ lại đúng log record match cả log_category=business VÀ
+  # kafka_topic=<tên topic đó>, rồi đẩy qua pipeline+exporter riêng trỏ cố định vào topic đó.
+  #
+  # Hệ quả: Dev viết `BusinessLog.Begin("ten-topic-moi")` trong code là xong phần của Dev; muốn
+  # log đó THẬT SỰ chảy vào Kafka thì DevOps thêm 1 block filter+exporter+pipeline như mẫu dưới
+  # (3-4 dòng YAML, không cần sửa gì bên App/SDK). Nếu Dev dùng 1 topic chưa được khai báo ở đây,
+  # log đó KHÔNG bị mất — vẫn lên Elasticsearch bình thường qua pipeline "logs" phía dưới, chỉ đơn
+  # giản là không có nhánh nào đẩy nó sang Kafka.
+  filter/topic_order_events:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'attributes["log_category"] != "business" or attributes["kafka_topic"] != "order-events"'
+
+  # --- Exclusive routing: log đã đi Kafka thì KHÔNG lên Elasticsearch nữa -----------------
+  # Dùng trong pipeline "logs" chính bên dưới. Điều kiện ở đây phải khớp 1-1 với từng
+  # filter/topic_<ten_topic> đã khai báo phía trên — thêm 1 topic Kafka mới thì thêm 1 dòng
+  # "or (... and kafka_topic == "<topic_moi>")" ở đây. Log business với 1 topic CHƯA được khai
+  # báo (gõ sai tên, hoặc Dev dùng topic mới mà DevOps chưa kịp thêm route) sẽ KHÔNG bị loại ở
+  # đây — vẫn lên Elasticsearch như lưới an toàn, để không mất dữ liệu một cách âm thầm.
+  filter/exclude_kafka_routed:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'attributes["log_category"] == "business" and attributes["kafka_topic"] == "order-events"'
+
 exporters:
   otlp/elastic:
     endpoint: "apm-server:8200"
     tls:
       insecure: true
+  kafka/order_events:
+    # Demo này chỉ có 1 broker ("kafka" trong docker-compose.yml). Ở hạ tầng thật có nhiều
+    # broker node trong CÙNG 1 cluster, liệt kê thêm vào đây, ví dụ:
+    #   brokers:
+    #     - "kafka-broker1.internal:9092"
+    #     - "kafka-broker2.internal:9092"
+    #     - "kafka-broker3.internal:9092"
+    # Đây chỉ là danh sách "bootstrap brokers" để Collector kết nối lấy metadata cluster lúc
+    # khởi động — không cần liệt kê hết toàn bộ broker, chỉ cần vài node còn sống là đủ. Sau khi
+    # có metadata, Kafka client (Sarama, bên trong kafkaexporter) tự biết broker nào đang giữ
+    # leader của từng partition topic "order-events" và tự gửi thẳng tới đúng broker đó — không
+    # phải chỉ định thủ công, và không liên quan gì đến attribute `kafka_topic` Dev gắn trên log.
+    brokers: ["kafka:9092"]
+    topic: "order-events"
+    encoding: otlp_json
   debug:
     verbosity: basic
 
@@ -32,8 +82,15 @@ service:
       exporters: [otlp/elastic, debug]
     logs:
       receivers: [otlp]
-      processors: [batch]
+      processors: [filter/exclude_kafka_routed, batch]
       exporters: [otlp/elastic, debug]
+    # Cùng nhận log từ receiver otlp ở trên (KHÔNG phải bản sao — đây là routing loại trừ lẫn
+    # nhau với pipeline "logs": 1 log record chỉ nằm trong ĐÚNG MỘT trong hai pipeline này).
+    # Log business khớp topic đã khai báo đi theo nhánh này, sang Kafka, không còn lên ES nữa.
+    logs/business_order_events:
+      receivers: [otlp]
+      processors: [filter/topic_order_events, batch]
+      exporters: [kafka/order_events]
   telemetry:
     logs:
       level: info

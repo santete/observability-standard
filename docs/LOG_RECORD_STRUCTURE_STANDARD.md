@@ -60,7 +60,15 @@ Dưới đây là cấu trúc mẫu tin JSON thực tế đầy đủ nhất đ�
 
     // --- [3.4] TỰ ĐỘNG CHE MỜ DỮ LIỆU NHẠY CẢM (PII Masking Enricher) ---
     "customer_email": "a***@fpt.com",                   // Email đã được mask tự động
-    "customer_phone": "090*****89"                      // Số điện thoại đã được mask tự động
+    "customer_phone": "090*****89",                      // Số điện thoại đã được mask tự động
+
+    // --- [3.5] TUỲ CHỌN: Dev đánh dấu log business + chỉ định topic Kafka đích ---
+    // Xem ISC.Observability.Logging.BusinessLog — chỉ xuất hiện khi Dev chủ động bọc
+    // using (BusinessLog.Begin("order-events")) { ... }. Collector (OTel) đọc 2 field này để
+    // route log sang đúng topic Kafka Dev chỉ định — EXCLUSIVE: nếu topic đã được DevOps khai
+    // báo route, log này sẽ KHÔNG còn lên Elasticsearch/Kibana nữa, chỉ còn trong Kafka.
+    "log_category": "business",                         // Cố định "business" khi được đánh dấu
+    "kafka_topic": "order-events"                        // Tên topic Kafka do Dev tự chọn
   }
 }
 ```
@@ -83,6 +91,8 @@ Dưới đây là cấu trúc mẫu tin JSON thực tế đầy đủ nhất đ�
 | `thread_id` | Integer | **BẮT BUỘC** | **SDK** | ID Thread xử lý của runtime .NET. |
 | `body` / `message` | String | **BẮT BUỘC** | **Developer** | Thông điệp log mô tả sự kiện (dùng Message Template). |
 | **Các tham số nghiệp vụ** *(vd: `order_id`, `amount`)* | Tùy biến | **BẮT BUỘC** *(khi có)* | **Developer** | **PHẢI viết theo `snake_case`** (`R-OBS-FIELD-001`). Cấm dùng camelCase hoặc PascalCase. |
+| `log_category` | String | Tùy chọn | **Developer** | Chỉ xuất hiện khi Dev gọi `BusinessLog.Begin(...)`. Giá trị cố định `"business"` — đánh dấu log này cần stream sang Kafka. |
+| `kafka_topic` | String | Tùy chọn | **Developer** | Tên topic Kafka đích, Dev tự chọn qua tham số của `BusinessLog.Begin("ten-topic")`. DevOps cần khai báo route tương ứng trên OTel Collector (`otel-collector-config.yml`) thì log mới thực sự tới được Kafka. **Routing loại trừ lẫn nhau**: 1 log business khớp topic đã khai báo route sẽ **không còn xuất hiện trên Elasticsearch/Kibana nữa**, chỉ còn trong Kafka; nếu topic chưa được khai báo route, log vẫn lên Elasticsearch bình thường (an toàn, không mất dữ liệu). |
 
 > [!CAUTION]
 > **TIÊU CHÍ BLOCKER:** Bất kỳ bản ghi log nào thiếu một trong các trường: `trace_id`, `service_name`, hoặc `level` đều bị coi là **vi phạm nghiêm trọng** và sẽ bị từ chối phê duyệt Merge Request / Quality Gate 2 vì làm mất khả năng điều tra sự cố.

@@ -122,30 +122,66 @@ Sau khi khởi chạy, truy cập [Kibana](http://localhost:5601) → **Dashboar
 2. Chọn Data View: `traces-*.otel-*` hoặc `logs-*.otel-*`
 3. Tìm kiếm: `trace_id: "<your-trace-id>"`
 
-## 🔄 Tích hợp Kafka (Dành cho DevOps)
+## 🔄 Tích hợp Kafka — Dev đánh dấu log business, Collector route theo topic (SDK v1.6.0)
 
-Theo chuẩn kiến trúc Observability hiện tại, SDK `ISC.Observability` **KHÔNG** ghi log trực tiếp vào Kafka để giữ cho App nhẹ nhất có thể. Thay vào đó, việc đồng bộ log/trace sang Kafka được ủy quyền hoàn toàn cho **OpenTelemetry Collector**.
+Theo chuẩn kiến trúc Observability hiện tại, SDK `ISC.Observability` **KHÔNG** tự kết nối/ghi trực tiếp vào Kafka để giữ cho App nhẹ nhất có thể. Việc đẩy message vào Kafka được ủy quyền hoàn toàn cho **OpenTelemetry Collector** — Dev chỉ *đánh dấu ý định* trên log, DevOps mới là bên quyết định cơ chế route thật qua cấu hình Collector.
 
-Nếu DevOps muốn xuất log sang hệ thống Kafka có sẵn, chỉ cần cấu hình thêm `kafka exporter` trong file `otel-collector-config.yml`:
+**Phía Dev** — bọc log cần stream sang Kafka bằng `ISC.Observability.Logging.BusinessLog`, chỉ định luôn tên topic:
+
+```csharp
+using ISC.Observability.Logging;
+
+using (BusinessLog.Begin("order-events"))
+{
+    _logger.LogInformation(
+        "Order processed successfully. OrderId: {OrderId}", order.Id);
+}
+```
+Log bên trong scope này tự động có thêm 2 field `log_category=business` và `kafka_topic=order-events` (xem `docs/LOG_RECORD_STRUCTURE_STANDARD.md` §3.5) — Dev không viết bất kỳ dòng code Kafka nào.
+
+**Phía DevOps** — với mỗi topic Dev đã thống nhất dùng, thêm **2 chỗ** trong `otel-collector-config.yml`: (1) 1 filter+exporter+pipeline đẩy log đó sang Kafka, và (2) 1 điều kiện loại trừ trong filter của pipeline `logs` chính để log đó **không còn lên Elasticsearch nữa** (routing loại trừ lẫn nhau — 1 log business chỉ nằm ở đúng 1 nơi: Kafka):
 
 ```yaml
+processors:
+  # Giữ lại các log record khớp topic "order-events" -> đẩy sang Kafka
+  filter/topic_order_events:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'attributes["log_category"] != "business" or attributes["kafka_topic"] != "order-events"'
+
+  # Loại các log đã được route sang Kafka ra khỏi pipeline Elasticsearch chính.
+  # Điều kiện ở đây phải khớp 1-1 với từng filter/topic_<ten> phía trên — thêm 1 topic mới
+  # thì thêm 1 "or (...)" ở đây.
+  filter/exclude_kafka_routed:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'attributes["log_category"] == "business" and attributes["kafka_topic"] == "order-events"'
+
 exporters:
-  kafka:
-    protocolVersion: 2.0.0
-    brokers:
-      - kafka-broker1:9092
-      - kafka-broker2:9092
-    topic: my-observability-logs
-    # Tùy chọn cấu hình auth, retry, queue...
+  kafka/order_events:
+    brokers: ["kafka:9092"]
+    topic: "order-events"
+    encoding: otlp_json
 
 service:
   pipelines:
-    logs:
+    logs:                                    # pipeline chính: loại log đã đi Kafka ra
       receivers: [otlp]
-      processors: [batch]
-      exporters: [elasticsearch, kafka] # Thêm kafka vào đây
+      processors: [filter/exclude_kafka_routed, batch]
+      exporters: [otlp/elastic, debug]
+    logs/business_order_events:
+      receivers: [otlp]
+      processors: [filter/topic_order_events, batch]
+      exporters: [kafka/order_events]
 ```
-*(Việc cấu hình này không yêu cầu Dev phải cập nhật Code hay Deploy lại Application)*
+
+> [!WARNING]
+> Không dùng field `topic_from_attribute` của `kafkaexporter` cho nhu cầu này — đã verify thật (otel-collector-contrib `0.114.0`, xem `governance/memory.md` GOT-03) rằng field đó chỉ đọc được **Resource attribute** (cố định theo cả service), không đọc được **log-record attribute** (chính là cách `kafka_topic` của `BusinessLog` hoạt động) — log sẽ âm thầm rơi vào topic fallback mà không có lỗi nào được log ra.
+
+> [!IMPORTANT]
+> **Exclusive routing (quyết định có chủ đích):** log business khớp 1 topic đã khai báo sẽ **biến mất khỏi Kibana** — không còn tra cứu được bằng `trace_id` trên Elasticsearch nữa, chỉ còn trong Kafka. Nếu Dev dùng một tên topic mà DevOps **chưa** khai báo route tương ứng (gõ sai tên, hoặc topic mới chưa kịp thêm), log đó **không bị mất** — vẫn lên Elasticsearch bình thường như lưới an toàn, chỉ đơn giản chưa có nhánh Kafka nào nhận. Hệ quả: 1 topic mới = DevOps phải sửa **cả 2 chỗ** (thêm route + thêm điều kiện loại trừ) thì log mới thật sự rời khỏi Kibana; quên sửa chỗ (2) thì log sẽ tạm thời lên **cả 2 nơi** cho tới khi DevOps bổ sung.
 
 ## 🏗️ Cấu trúc dự án
 

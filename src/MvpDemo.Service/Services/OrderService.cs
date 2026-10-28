@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using OpenTelemetry.Trace;
+using ISC.Observability.Logging;
 using MvpDemo.Service.Models;
 using MvpDemo.Service.Telemetry;
 
@@ -220,9 +221,15 @@ public class OrderService
             DiagnosticsConfig.OrdersCompletedCounter.Add(1);
             DiagnosticsConfig.OrdersPendingGauge.Add(-1);
 
-            _logger.LogInformation(
-                "Order processed successfully. OrderId: {OrderId}, Duration: {DurationMs}ms, ProcessedBy: {ProcessedBy}",
-                order.Id, stopwatch.Elapsed.TotalMilliseconds, order.ProcessedBy);
+            // Business event: Dev tự đánh dấu log này + chỉ định topic Kafka đích ("order-events").
+            // Collector sẽ đọc attribute log_category/kafka_topic để route sang Kafka, song song
+            // với đường đi mặc định tới Elasticsearch (xem otel-collector-config.yml).
+            using (BusinessLog.Begin("order-events"))
+            {
+                _logger.LogInformation(
+                    "Order processed successfully. OrderId: {OrderId}, Duration: {DurationMs}ms, ProcessedBy: {ProcessedBy}",
+                    order.Id, stopwatch.Elapsed.TotalMilliseconds, order.ProcessedBy);
+            }
 
             return order;
         }
