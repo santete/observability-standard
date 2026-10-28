@@ -1,67 +1,55 @@
-# 📦 ISC.Observability SDK (Multi-target: .NET 6 / .NET 7 / .NET 8)
+# ISC.Observability SDK
 
-> **Gói SDK Tiêu chuẩn (Official Standard SDK) dành cho các dịch vụ Backend (.NET 6, .NET 7, .NET 8) thuộc hệ sinh thái Microservices.** 
-> Tự động hóa toàn bộ quá trình thu thập Logs, Metrics, và Traces (OpenTelemetry) theo tiêu chuẩn vận hành tập trung mà không yêu cầu thay đổi logic code của ứng dụng.
+Standard Observability SDK for .NET 6 / .NET 7 / .NET 8 microservices. One line of code wires up structured logging, distributed tracing, and metrics (OpenTelemetry + Serilog) to the central OTel Collector — no sink configuration, no boilerplate.
 
----
+## Features
 
-## ✨ Tính năng nổi bật (Features)
+- **Multi-targeting** — `net6.0`, `net7.0`, `net8.0`. Supports `WebApplicationBuilder`, `IHostApplicationBuilder`, and `IServiceCollection`/`Startup.cs`.
+- **Tracing** — automatic W3C trace context propagation across HTTP in/out, with a composite W3C + B3 + Baggage propagator for Istio/Envoy service meshes.
+- **Structured logging** — Serilog, 100% `snake_case` JSON fields, `trace_id`/`span_id` auto-attached to every log line.
+- **Global exception handling** — unhandled exceptions are caught, logged at `ERROR` with full stack trace, and marked on the active span.
+- **PII masking** — sensitive fields (password, token, email, phone, card number...) are masked automatically before any log leaves the process. Zero-allocation (cached per property name).
+- **Business event routing to Kafka** — mark a log as a business event and pick its destination Kafka topic from code; the OTel Collector does the actual routing (see [Business Event Logging](#business-event-logging-kafka-routing)).
+- **Runtime & HTTP metrics** — RPS, latency, error rate, CPU/RAM, GC, ThreadPool.
+- **OTLP-only egress** — the SDK never writes to a file, Kafka, or Elasticsearch directly. Everything goes out over OTLP to the Collector.
 
-Chỉ với **1 dòng code tích hợp**, ứng dụng của bạn sẽ lập tức sở hữu:
+## Supported instrumentations
 
-- 🎯 **Hỗ trợ Đa nền tảng (Multi-Targeting `net6.0;net7.0;net8.0`):** Cài đặt trực tiếp trên cả các dự án `.NET 6`, `.NET 7` và `.NET 8` (hỗ trợ cả `WebApplicationBuilder`, `IHostApplicationBuilder` và `IServiceCollection` / `Startup.cs`).
-- 🔗 **Auto-Instrumentation (Tracing):** Tự động theo dõi toàn bộ HTTP Requests (In/Out), gán `TraceId` xuyên suốt qua các Microservices (W3C TraceContext).
-- 📝 **Structured Logging:** Ghi log có cấu trúc (JSON) thông qua Serilog, tự động đính kèm `TraceId` vào mỗi dòng log.
-- 🛡️ **Global Exception Handling:** Tự động "bắt" toàn bộ các lỗi (Crash/Exception) chưa được xử lý, chụp StackTrace và ghi log mức `ERROR` tránh lọt lỗi.
-- 🕵️ **PII Masking (Bảo mật & Hiệu năng cao):** Thuật toán tự động quét và làm mờ (Mask) các thông tin nhạy cảm của người dùng (SĐT, Email, Số thẻ) bằng `***`. Được thiết kế tối ưu với **Zero-Allocation Caching** đảm bảo không sinh rác (GC Pressure) khi chịu tải cao.
-- 📊 **Runtime & HTTP Metrics:** Thu thập liên tục các chỉ số sinh tồn của ứng dụng: RAM, CPU, Garbage Collection (GC), ThreadPool, Request Per Second (RPS), Latency.
-- 🚀 **OTLP Exporting:** Tuân thủ chuẩn OpenTelemetry Protocol (OTLP), xuất dữ liệu trực tiếp về OTel Collector. Hoàn toàn không ghi đè ra file vật lý, không kết nối trực tiếp vào Kafka/Elasticsearch gây phình ứng dụng.
+All opt-in except HTTP and EF Core, toggled via config — no code changes required.
 
-## 🔌 Các công nghệ được hỗ trợ (Instrumentations)
+| Instrumentation | Config flag | Default |
+|---|---|---|
+| ASP.NET Core + HttpClient | — | always on |
+| Entity Framework Core (SQL Server, Postgres, MySQL...) | `Otel:EnableEntityFramework` | `true` |
+| Redis (StackExchange.Redis) | `Otel:EnableRedis` | `false` |
+| MongoDB | `Otel:EnableMongo` | `false` |
+| Message brokers (MassTransit / Kafka / RabbitMQ) | `Otel:EnableMassTransit` | `false` |
+| Quartz.NET background jobs | `Otel:EnableQuartz` | `false` |
+| gRPC client | `Otel:EnableGrpc` | `false` |
 
-SDK hiện tại đã tích hợp sẵn thư viện để theo dõi (trace) các thành phần sau. Bạn chỉ cần bật/tắt chúng trong cấu hình mà không cần code thêm:
-
-1. **HTTP (ASP.NET Core & HttpClient):** Mặc định bật. Thu thập các request HTTP đi vào API và các request gọi ra ngoài qua HttpClient.
-2. **Entity Framework Core (SQL Server, Postgres, MySQL, v.v.):** Tự động trace các câu lệnh SQL và thời gian thực thi DB.
-3. **Redis (StackExchange.Redis):** Tự động trace các câu lệnh Cache (GET, SET, MGET, v.v.)
-4. **MongoDB (MongoDB.Driver.Core.Extensions.DiagnosticSources):** Tự động trace các lệnh truy vấn NoSQL (Insert, Find, Update).
-5. **Message Broker (MassTransit / Kafka / RabbitMQ):** Tự động nối Trace Context xuyên qua hệ thống queue/message bus.
-6. **Background Jobs (Quartz.NET):** Tự động trace các chu trình chạy ngầm.
-7. **gRPC (GrpcNetClient):** Tự động trace các cuộc gọi gRPC.
-
-## 📥 Cài đặt (Installation)
-
-Cài đặt package thông qua NuGet Package Manager hoặc .NET CLI (tự động nhận diện `.NET 6`, `.NET 7` hoặc `.NET 8`):
+## Installation
 
 ```bash
 dotnet add package ISC.Observability
 ```
 
-*(Lưu ý: Bạn **NÊN GỠ BỎ** các package liên quan đến Serilog cũ như `Serilog.Sinks.Console`, `Serilog.Sinks.File`, v.v. để tránh xung đột cấu hình, vì SDK đã bao bọc đầy đủ bên trong).*
+Remove any existing `Serilog.Sinks.*` packages (`Console`, `File`...) from the project — the SDK configures its own sinks and a second one will conflict.
 
-## 🚀 Hướng dẫn sử dụng (Quick Start)
-
-### 1. Khởi tạo trong `Program.cs`
-
-Mở file `Program.cs` của ứng dụng và thêm **duy nhất 1 dòng lệnh** `builder.AddStandardObservability(...)` trước khi gọi `builder.Build()`.
+## Quick start
 
 ```csharp
-using ISC.Observability.Extensions; // 👈 Thêm thư viện
+using ISC.Observability.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Tích hợp SDK Tiêu chuẩn Observability
-// Cấu hình tên mặc định của Service (ưu tiên lấy từ appsettings.json nếu có)
-builder.AddStandardObservability("MyDemoService");
+builder.AddStandardObservability("MyService");   // 1. logging + tracing + metrics
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// 2. Kích hoạt các Middleware (Bắt lỗi & TraceId)
-app.UseStandardObservability();
+app.UseStandardObservability();                  // 2. CorrelationId + GlobalException + request logging
 
-// 3. Đánh dấu các endpoint mà bạn muốn SDK tự động tắt tiếng log trên Kibana
 app.MapHealthChecks("/health").SuppressRequestLogging();
 app.MapHealthChecks("/ready").SuppressRequestLogging();
 
@@ -69,119 +57,90 @@ app.MapControllers();
 app.Run();
 ```
 
-### 2. Bật / Tắt Các Instrumentations Bằng `appsettings.json`
+## Configuration
 
-Bạn không cần can thiệp vào code để kích hoạt các tính năng theo dõi database hay redis. Chỉ cần cấu hình file `appsettings.json` (hoặc Environment Variables). Mặc định nếu không cấu hình, các instrument bên ngoài (Redis, Mongo, Kafka...) sẽ tắt để tiết kiệm tài nguyên.
+Everything below is read from `appsettings.json` / environment variables — no code changes.
 
-#### Cấu hình OTLP Endpoint (2 cách)
-
-**Cách A — Endpoint đầy đủ từng signal (khuyến nghị, khớp hạ tầng ISC cổng 80):**
-
-Mỗi signal khai URL đầy đủ đã kèm path. SDK dùng nguyên URL này, **không tự nối path** — nên khi OTel đổi keyword (vd `/v2/traces`) bạn chỉ cần sửa config, không phụ thuộc SDK.
+**OTLP endpoint — two ways to configure it:**
 
 ```json
+// A) Full per-signal URL (recommended — matches ISC infra, port 80)
 {
   "ServiceName": "Payment.Service",
   "ServiceVersion": "1.2.0",
   "OpenTelemetry": {
-    "Logs":      "http://signoz-otel.fpt.net/v1/logs",
-    "Tracing":   "http://signoz-otel.fpt.net/v1/traces",
-    "Metrics":   "http://signoz-otel.fpt.net/v1/metrics",
-    "IngestionKey": ""
+    "Logs":    "http://otel-collector.internal/v1/logs",
+    "Tracing": "http://otel-collector.internal/v1/traces",
+    "Metrics": "http://otel-collector.internal/v1/metrics"
   },
-  "Otel": {
-    "Protocol": "http",
-    "EnableRedis": true,
-    "EnableMongo": true,
-    "EnableMassTransit": true,
-    "EnableGrpc": false,
-    "EnableQuartz": false,
-    "EnableEntityFramework": true,
-    "TracesSampler": "always_on",
-    "CustomSources": "Payment.Service,Payment.Worker"
-  }
+  "Otel": { "Protocol": "http", "EnableRedis": true, "EnableMongo": true }
 }
 ```
-
-**Cách B — Base endpoint + SDK tự nối path (backward-compat với v1.3.x):**
-
-Khi không khai `OpenTelemetry:*`, SDK dùng `Otel:OtlpHttpEndpoint` (HTTP) hoặc `Otel:OtlpEndpoint` (gRPC) làm base và tự nối `/v1/<signal>`.
 
 ```json
+// B) Base endpoint, SDK appends /v1/<signal> (backward-compatible with v1.3.x)
 {
   "ServiceName": "Payment.Service",
-  "ServiceVersion": "1.2.0",
   "Otel": {
-    "OtlpEndpoint": "http://otel-collector:4317",
     "OtlpHttpEndpoint": "http://otel-collector:4318",
-    "Protocol": "http",
-    "EnableRedis": true,
-    "EnableMongo": true,
-    "EnableMassTransit": true,
-    "EnableGrpc": false,
-    "EnableQuartz": false,
-    "EnableEntityFramework": true,
-    "TracesSampler": "always_on",
-    "CustomSources": "Payment.Service,Payment.Worker"
+    "Protocol": "http"
   }
 }
 ```
 
-#### Bảng tham chiếu các khoá cấu hình
-
-| Khoá | Mặc định | Mô tả |
+| Key | Default | Description |
 |---|---|---|
-| `Otel:Protocol` | `http` | Chọn `http` hoặc `grpc`. Mặc định `http` vì hạ tầng ISC chỉ mở OTLP/HTTP cổng 80. |
-| `OpenTelemetry:Logs` / `Tracing` / `Metrics` | — | URL đầy đủ từng signal (đã kèm `/v1/...`). Ưu tiên cao nhất; SDK không tự nối path. |
-| `Otel:OtlpEndpoint` | `http://localhost:4317` | Base gRPC (fallback khi `Protocol=grpc`). |
-| `Otel:OtlpHttpEndpoint` | `http://localhost:4318` | Base HTTP (fallback khi `Protocol=http`); SDK tự nối `/v1/<signal>`. |
-| `OpenTelemetry:IngestionKey` | — | Tuỳ chọn, gửi làm header `Authorization: Bearer ...` cho exporter. |
-| `Otel:TracesSampler` | `always_on` | `always_on` \| `always_off` \| `parentbased` \| `<tỉ lệ 0..1>`. Mặc định `always_on` để APM xuất hiện dù ingress gắn traceparent sampled=00. |
-| `Otel:CustomSources` | — | Danh sách `ActivitySource` (phân tách dấu phẩy). Khi để trống → SDK dùng wildcard `*` (bắt tất cả). |
-| `Otel:EnableEntityFramework` | `true` | Bật/tắt EF Core instrumentation (thật sự đọc được kể từ v1.4.0). |
-| `Otel:EnableRedis` | `false` | Bật auto-trace cho Redis |
-| `Otel:EnableMongo` | `false` | Bật auto-trace cho MongoDB |
-| `Otel:EnableMassTransit` | `false` | Bật auto-trace cho Message Brokers (Kafka, RabbitMQ) qua MassTransit |
-| `Otel:EnableGrpc` | `false` | Bật/tắt gRPC client instrumentation |
-| `Otel:EnableQuartz` | `false` | Bật/tắt theo dõi Job của Quartz.NET |
+| `Otel:Protocol` | `http` | `http` or `grpc`. Default `http`: ISC infra only opens OTLP/HTTP (port 80/4318). |
+| `OpenTelemetry:Logs`/`Tracing`/`Metrics` | — | Full per-signal URL, path included. Highest priority; SDK does not append anything. |
+| `Otel:OtlpEndpoint` | `http://localhost:4317` | gRPC base (fallback, `Protocol=grpc`). |
+| `Otel:OtlpHttpEndpoint` | `http://localhost:4318` | HTTP base (fallback, `Protocol=http`); SDK appends `/v1/<signal>`. |
+| `OpenTelemetry:IngestionKey` | — | Sent as `Authorization: Bearer <key>` header, if set. |
+| `Otel:TracesSampler` | `always_on` | `always_on` \| `always_off` \| `parentbased` \| a ratio `0.0`-`1.0`. |
+| `Otel:CustomSources` | — | Comma-separated `ActivitySource` names. Empty → wildcard `*` (capture everything). |
+| `Otel:Enable{Redis,Mongo,MassTransit,Grpc,Quartz,EntityFramework}` | see table above | Per-instrumentation toggle. |
 
-### 3. Ghi Log Nghiệp Vụ (Business Logging)
+## Logging
 
-Code nghiệp vụ của bạn **không cần thay đổi**. Vẫn tiếp tục sử dụng `ILogger<T>` mặc định của .NET. SDK sẽ tự động format và đẩy log đi kèm với `TraceId`.
+### Standard logging
+
+Use `ILogger<T>` as usual — the SDK attaches `trace_id`, `span_id`, `service_name`, `environment`, `correlation_id` and masks PII automatically.
 
 ```csharp
-public class OrdersController : ControllerBase
+_logger.LogInformation("Processing order {order_id} for {customer_email}", order.Id, order.Email);
+// customer_email is masked in the emitted log ("n***@g***.com") — PiiMaskingEnricher runs on every event.
+```
+
+> [!IMPORTANT]
+> **Field naming (`R-OBS-FIELD-001`):** every property is `snake_case` — system fields (`service_name`, `trace_id`, `request_id`...) and business fields alike (`order_id`, `customer_name`, `total_amount`). No PascalCase, no camelCase.
+
+### Business event logging (Kafka routing)
+
+Mark a log as a business event and name the Kafka topic it should go to — the SDK never touches Kafka directly; it only tags the log, and the OTel Collector does the actual routing.
+
+```csharp
+using ISC.Observability.Logging;
+
+using (BusinessLog.Begin("order-events"))
 {
-    private readonly ILogger<OrdersController> _logger;
-
-    public OrdersController(ILogger<OrdersController> logger)
-    {
-        _logger = logger;
-    }
-
-    [HttpPost]
-    public IActionResult CreateOrder([FromBody] Order order)
-    {
-        // Ghi log chuẩn ISC (R-OBS-FIELD-001): Tham số nghiệp vụ BẮT BUỘC dùng snake_case
-        _logger.LogInformation("Bắt đầu xử lý đơn hàng {order_id} cho user {customer_email}", order.Id, order.Email);
-        
-        // Trình Masking PII của SDK sẽ tự động che mờ Email thành "n***@g***.com" trong log text.
-        return Ok();
-    }
+    _logger.LogInformation(
+        "Order {order_id} processed successfully, amount {total_amount}",
+        order.Id, order.TotalAmount);
 }
 ```
 
-> [!TIP]
-> **Quy chuẩn Đặt tên Thuộc tính Log (R-OBS-FIELD-001 & R-RESP-FIELD-001):**
-> * Toàn bộ thuộc tính trong log **đồng nhất 100% bằng `snake_case`**:
->   * Các trường hệ thống do SDK tự động sinh: `service_name`, `environment`, `application_version`, `machine_name`, `thread_id`, `correlation_id`, `request_id`, `trace_id`, `span_id`, `request_host`, `user_agent`.
->   * Các trường nghiệp vụ do Developer ghi: Bắt buộc dùng `snake_case` (ví dụ: `{order_id}`, `{customer_name}`, `{total_amount}`). Tuyệt đối không dùng PascalCase hoặc camelCase.
+Everything logged inside the `using` block gets two extra fields: `log_category=business` and `kafka_topic=order-events`. Exit the block (or `Dispose()`) and subsequent logs are untagged again.
 
-### 4. Tùy chỉnh Log Level & Lọc Log Rác (Từ v1.0.5)
+Requires SDK **v1.6.0+**. Three things to know:
 
-Theo mặc định, SDK thu thập toàn bộ log ở mức `Information`. Tuy nhiên, các thư viện bên thứ 3 (EF Core, HttpClient, Hangfire, v.v.) thường sinh ra rất nhiều log rác gây nhiễu hệ thống. 
+1. **The topic name must exist as a declared route on the OTel Collector** (`otel-collector-config.yml`, owned by DevOps). An undeclared/misspelled topic is never silently lost — the log just stays in Elasticsearch/Kibana as a safety net instead of reaching Kafka.
+2. **Routing is exclusive, not dual-write**: once a topic is declared, matching logs are removed from the Elasticsearch pipeline entirely — they are no longer searchable in Kibana by `trace_id`, only consumable from Kafka.
+3. Wrap only the specific log line(s) that are the actual business event — don't leave the scope open across a whole request, or unrelated technical logs will get tagged too.
 
-Từ bản **1.0.5**, bạn có thể chặn các log này bằng cách thêm cấu hình `Serilog` vào `appsettings.json`. Tính năng này dựa trên namespace (SourceContext):
+See the project root `README.md` and `otel-collector-config.yml` for how DevOps wires a topic route (this package has no control over broker addresses, clusters, or Collector config).
+
+### Noise filtering
+
+Third-party libraries (EF Core, HttpClient, Hangfire...) log a lot at `Information`. Override per namespace in `appsettings.json` (since v1.0.5):
 
 ```json
 {
@@ -191,230 +150,77 @@ Từ bản **1.0.5**, bạn có thể chặn các log này bằng cách thêm c�
       "Override": {
         "Microsoft.EntityFrameworkCore": "Warning",
         "System.Net.Http.HttpClient": "Warning",
-        "Hangfire": "Warning",
-        "MassTransit": "Warning",
-        "StackExchange.Redis": "Warning"
+        "MassTransit": "Warning"
       }
     }
   }
 }
 ```
 
-### 5. Lọc Log thông minh của SDK (Type-safe Marker Metadata)
+For anything a namespace override can't express (e.g. filtering by `EventId`), pass a callback:
 
-SDK sử dụng cơ chế **Marker Metadata** (Type-safe, zero string comparison) để kiểm soát việc lọc log. Thay vì hardcode danh sách URL, Dev chủ động đánh dấu endpoint nào cần tắt tiếng log bằng extension method `.SuppressRequestLogging()`.
-
-#### Cách hoạt động
-SDK **KHÔNG XÓA SỔ** log. Thay vào đó, SDK **HẠ CẤP** log của các endpoint được đánh dấu xuống mức `Verbose`. Vì các Sink (Console, OpenTelemetry/Kibana) mặc định chỉ hiển thị từ `Information` trở lên, các request đến endpoint này sẽ tự động biến mất khỏi dashboard.
-
-> [!IMPORTANT]
-> **An toàn tuyệt đối:** Nếu một endpoint đã được đánh dấu `.SuppressRequestLogging()` nhưng trả về lỗi (HTTP >= 500 hoặc có Exception), log sẽ **TỰ ĐỘNG NÂNG LÊN mức Error** và vẫn xuất hiện đầy đủ trên Kibana. SDK không bao giờ che giấu lỗi hệ thống.
-
-#### Hiệu năng (Benchmark Zero-Allocation)
-Thiết kế Marker Metadata giúp hệ thống loại bỏ hoàn toàn tình trạng cấp phát rác (Garbage Allocation) so với phương pháp lọc URL cũ, giúp tránh các đợt giật lag do Garbage Collection gây ra trên hệ thống High-Load:
-
-| Phương pháp | Thời gian (CPU) | Rác sinh ra trên RAM |
-|---|---|---|
-| Lọc theo URL (Bản cũ) | 17.89 ns | 40 Bytes / request |
-| **Marker Metadata (Bản mới)** | **43.17 ns** | **0 Bytes (Zero Allocation)** |
-
-#### Ví dụ sử dụng
 ```csharp
-using ISC.Observability.Extensions;
-
-var app = builder.Build();
-app.UseStandardObservability();
-
-// Tắt tiếng log cho các endpoint healthcheck
-app.MapHealthChecks("/health").SuppressRequestLogging();
-app.MapHealthChecks("/ready").SuppressRequestLogging();
-
-// Cũng có thể dùng cho bất kỳ endpoint nào (không chỉ healthcheck)
-app.MapGet("/internal/ping", () => "pong").SuppressRequestLogging();
-
-app.MapControllers();
-app.Run();
-```
-
-> [!TIP]
-> Nếu bạn **KHÔNG** gọi `.SuppressRequestLogging()` trên bất kỳ endpoint nào, SDK sẽ log tất cả request ở mức `Information` bình thường. Không có magic, không có filter ngầm nào cả.
-
-#### Console Sink — Tự động điều chỉnh theo môi trường (Từ v1.2.0)
-
-> [!IMPORTANT]
-> **Breaking Change từ v1.2.0:** Console Sink không còn bật mặc định ở mọi môi trường. Hành vi mới giúp giảm nhiễu log cho Dev và tiết kiệm I/O cho Production.
-
-SDK tự động detect môi trường và điều chỉnh Console Sink cho phù hợp:
-
-| Môi trường | Console Sink | Format | Lý do |
-|---|---|---|---|
-| `Development` / `Local` | ✅ **Bật mặc định** | Plain text (đọc được) | Dev cần xem log trực tiếp trên terminal |
-| `Production` / `Staging` / Khác | ❌ **Tắt mặc định** | — | Đã có OTel Sink bắn log về Kibana, console thừa |
-
-##### Sơ đồ 1: Development / Local — Console Sink BẬT
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     Application Code                         │
-│                                                              │
-│  Console.WriteLine("debug xyz")     ILogger<T>.LogInfo(...)  │
-│         │                                    │               │
-└─────────┼────────────────────────────────────┼───────────────┘
-          │                                    │
-          │                             ┌──────▼──────────┐
-          │                             │  Serilog Engine  │
-          │                             │  (Enrich: Trace, │
-          │                             │  PII Masking...) │
-          │                             └──┬──────────┬────┘
-          │                                │          │
-          │                   ┌────────────▼──┐  ┌────▼──────────────┐
-          │                   │ ✅ Console     │  │ ✅ OTel Sink       │
-          │                   │ Sink (Plain)   │  │ (HTTP Protobuf)   │
-          │                   └────────┬───────┘  └────────┬──────────┘
-          │                            │                   │
-          ▼                            ▼                   ▼
-   ┌─────────────────────────────┐              ┌──────────────────┐
-   │    stdout / Terminal        │              │   OTel Collector  │
-   │  (trộn lẫn cả 2 loại log)  │              │   → Kibana        │
-   └─────────────────────────────┘              └──────────────────┘
-```
-
-> Dev nhìn terminal thấy **cả 2 loại** trộn lẫn: log của Serilog (plain text) + `Console.WriteLine()` của chính mình. Chấp nhận được vì đang develop.
-
-##### Sơ đồ 2: Production / Staging — Console Sink TẮT
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     Application Code                         │
-│                                                              │
-│  Console.WriteLine("debug xyz")     ILogger<T>.LogInfo(...)  │
-│         │                                    │               │
-└─────────┼────────────────────────────────────┼───────────────┘
-          │                                    │
-          │                             ┌──────▼──────────┐
-          │                             │  Serilog Engine  │
-          │                             │  (Enrich: Trace, │
-          │                             │  PII Masking...) │
-          │                             └──┬──────────┬────┘
-          │                                │          │
-          │                   ┌ ─ ─ ─ ─ ─ ▼─ ┐  ┌────▼──────────────┐
-          │                     ❌ Console          │ ✅ OTel Sink       │
-          │                   │ Sink (TẮT)    │  │ (HTTP Protobuf)   │
-          │                    ─ ─ ─ ─ ─ ─ ─ ─   └────────┬──────────┘
-          │                                                │
-          ▼                                                ▼
-   ┌─────────────────────────────┐              ┌──────────────────┐
-   │    stdout / Terminal        │              │   OTel Collector  │
-   │  (sạch, chỉ Console.Write) │              │   → Kibana        │
-   └─────────────────────────────┘              └──────────────────┘
-```
-
-> **stdout sạch:** Chỉ còn `Console.WriteLine()` của Dev (nếu có). Log nghiệp vụ qua `ILogger<T>` đi thẳng OTel Sink → Kibana. Không bị trộn lẫn, không tốn I/O ghi double.
-
-**Ví dụ log ở Development (plain text):**
-```
-[19:11:38 INF] Standard Observability SDK initialized for "sr-owner-api" with Environment "Local". [Compliance=True]
-[19:11:39 INF] Bắt đầu xử lý đơn hàng ORD-001 cho user n***@g***.com
-```
-
-**Override hành vi mặc định** qua `appsettings.json`:
-
-```json
-// Bật Console Sink ở Production (opt-in cho container log scraping)
+builder.AddStandardObservability("MyService", loggerConfig =>
 {
-  "Serilog": {
-    "Console": {
-      "Enabled": true
-    }
-  }
-}
-```
-
-```json
-// Tắt Console Sink ở Development (nếu Dev không cần)
-{
-  "Serilog": {
-    "Console": {
-      "Enabled": false
-    }
-  }
-}
-```
-
-**Điều chỉnh mức log tối thiểu trên Console** (áp dụng khi Console Sink đang bật):
-```json
-{
-  "Serilog": {
-    "Console": {
-      "RestrictedToMinimumLevel": "Warning"
-    }
-  }
-}
-```
-
-#### Custom Filter bổ sung
-Nếu bạn có nhu cầu lọc thêm các log đặc thù (ví dụ: Log retry của Polly mang EventId `ExecutionAttempt`), bạn có thể tự định nghĩa bằng cách truyền hàm Callback vào `AddStandardObservability` tại `Program.cs`:
-```csharp
-builder.AddStandardObservability("MyService", loggerConfig => 
-{
-    loggerConfig.Filter.ByExcluding(logEvent => 
-    {
-        if (logEvent.Properties.TryGetValue("EventId", out var eventId))
-        {
-            return eventId.ToString().Contains("ExecutionAttempt");
-        }
-        return false;
-    });
+    loggerConfig.Filter.ByExcluding(e =>
+        e.Properties.TryGetValue("EventId", out var id) && id.ToString().Contains("ExecutionAttempt"));
 });
 ```
 
-> [!CAUTION]
-> **Nghiêm cấm ghi log trực tiếp ra các Sink ngoại lai (Kafka, File, Elasticsearch):**
-> Theo chuẩn kiến trúc, ứng dụng chỉ được phép có **MỘT ĐƯỜNG RA DUY NHẤT** là thông qua giao thức OTLP về OpenTelemetry Collector. Mọi thao tác cấu hình Sink ghi trực tiếp ra Kafka trong code đều là vi phạm kiến trúc, làm phình to ứng dụng và suy giảm hiệu năng. Việc phân tách nhánh Kafka Topic phải được thực hiện trên cấu hình của OTel Collector.
+### Suppressing noisy endpoints
 
-### 6. Custom Tracing (Theo dõi sâu hơn bên trong phương thức)
-
-Trong trường hợp bạn có một hàm xử lý rất nặng (ví dụ: chạy thuật toán tính toán phức tạp, hoặc parse file lớn) và muốn tách nó thành 1 Span riêng biệt hiển thị trên biểu đồ thác nước (Waterfall) của Kibana APM, bạn có thể tự tạo **Custom Span** bằng `System.Diagnostics.ActivitySource`:
+Use `.SuppressRequestLogging()` on any endpoint (not just health checks) to downgrade its request log to `Verbose` — it disappears from Kibana/Console, but **errors on it are never suppressed**: HTTP ≥ 500 or an exception always logs at `Error` regardless.
 
 ```csharp
-using System.Diagnostics;
+app.MapHealthChecks("/health").SuppressRequestLogging();
+app.MapGet("/internal/ping", () => "pong").SuppressRequestLogging();
+```
 
-public class ComplexService
+This is a type-safe endpoint metadata marker, not a URL string match — zero allocation per request (benchmarked at 0 bytes vs. 40 bytes/request for the old URL-filter approach).
+
+### Console sink
+
+| Environment | Console sink | Format |
+|---|---|---|
+| `Development` / `Local` | On by default | Plain text |
+| `Production` / `Staging` / other | Off by default | — (OTel sink already covers it) |
+
+Override either way via config:
+
+```json
+{ "Serilog": { "Console": { "Enabled": true, "RestrictedToMinimumLevel": "Warning" } } }
+```
+
+> [!CAUTION]
+> **No direct external sinks.** The SDK's only egress is OTLP to the Collector — never configure `WriteTo.Kafka()`, `WriteTo.Elasticsearch()`, or `WriteTo.File()` in application code. The sanctioned way to get a log into Kafka is `BusinessLog.Begin(...)` above, routed by the Collector — not a sink in your code.
+
+## Custom spans
+
+For a business-logic function worth its own entry in the Kibana APM waterfall:
+
+```csharp
+private static readonly ActivitySource MyActivitySource = new("Payment.Service");
+
+public void ProcessLargeData()
 {
-    // 1. Định nghĩa ActivitySource với cùng tên Service Name của ứng dụng
-    private static readonly ActivitySource MyActivitySource = new ActivitySource("Payment.Service");
+    using var activity = MyActivitySource.StartActivity("ProcessLargeData.CalculateHash");
+    activity?.SetTag("data.size", "150MB");
 
-    public void ProcessLargeData()
+    try
     {
-        // 2. Bắt đầu tạo 1 Span mới bao bọc logic này
-        using var activity = MyActivitySource.StartActivity("ProcessLargeData.CalculateHash");
-
-        // (Tùy chọn) Gắn thêm Tag / Thuộc tính để dễ tìm kiếm trên Kibana
-        activity?.SetTag("data.size", "150MB");
-        activity?.SetTag("algorithm", "SHA256");
-
-        try
-        {
-            // Thực thi logic nghiệp vụ nặng...
-            Thread.Sleep(2000); 
-            
-            activity?.SetStatus(ActivityStatusCode.Ok);
-        }
-        catch (Exception ex)
-        {
-            // Nếu có lỗi, đánh dấu Span là lỗi và ghi lại Exception
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            throw;
-        }
+        // ...
+        activity?.SetStatus(ActivityStatusCode.Ok);
+    }
+    catch (Exception ex)
+    {
+        activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+        throw;
     }
 }
 ```
-*Lưu ý: Bạn không cần cài package gì thêm để code đoạn này vì `System.Diagnostics` là hàm built-in của .NET Core.*
 
-## 🛡️ Tích hợp luồng QA Compliance
+No extra package needed — `System.Diagnostics` is built into .NET.
 
-Khi ứng dụng của bạn khởi chạy thành công với SDK này, hệ thống sẽ tự động phát đi một sự kiện Log (Event) và Metric báo hiệu: `[Compliance=True]`. 
-QA Team và Dashboard **QA Compliance Tracker (Lớp 4)** sẽ tự động nhận diện ứng dụng của bạn là ĐẠT CHUẨN để sẵn sàng Release lên môi trường Production.
+## QA compliance signal
 
----
-*© 2026. Tuân thủ Kiến trúc Microservices Tiêu Chuẩn.*
+On successful startup, the SDK emits a log line and the `observability.sdk.active` metric. The **QA Compliance Tracker** dashboard uses this to confirm a service is integrated before it's allowed to release to Production.

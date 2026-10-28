@@ -26,6 +26,7 @@ nuget_keys.txt
 *.secret
 *.env
 *.env.*
+/env
 *.pdf
 src/sdk-issue.md
 
