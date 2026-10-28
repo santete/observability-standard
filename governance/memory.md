@@ -40,3 +40,4 @@
 - **v1.3.0 & v1.3.1**: Sửa lỗi `Counter.Add()` no-op qua `ComplianceMetricsService`.
 - **v1.3.2**: Hỗ trợ B3 Propagator cho Envoy Mesh & wildcard `tracing.AddSource("*")`. Published trên NuGet.org.
 - **v1.6.0**: Thêm `ISC.Observability.Logging.BusinessLog` — Dev đánh dấu log business + chọn topic Kafka đích, Collector route theo attribute (ADR-04).
+- **v1.6.1**: Chỉ cập nhật README đóng gói trong NuGet package (bản 1.6.0 đã publish trước khi README được viết lại, NuGet.org không cho sửa nội dung version đã publish) — không đổi code/behavior.
